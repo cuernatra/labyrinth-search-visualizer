@@ -33,10 +33,30 @@ void Grid::setStartNode(int col) {
     if (!nodes.empty() && !nodes[0].empty()) 
     {
         nodes[nodes.size() - 1][col].state = NodeState::Start;
-        startNode = nodes[nodes.size() - 1][col];
+        startNode = &nodes[nodes.size() - 1][col];
     }
 }
 
 Node& Grid::getStartNode() {
-    return startNode;
+    return *startNode;
+}
+
+void Grid::resetMaze()
+{
+    for (auto& row : getAllNodes())
+    {
+        for (auto& node : row)
+        {
+            if (node.state == NodeState::Visited ||
+                node.state == NodeState::Goal ||
+                node.state == NodeState::Path)
+            {
+                node.state = NodeState::Empty;
+            }
+
+            node.clearNeighbors();
+        }
+    }
+
+    getStartNode().state = NodeState::Start;
 }

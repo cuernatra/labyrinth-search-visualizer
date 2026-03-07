@@ -19,9 +19,10 @@ class Grid
         const std::vector<std::vector<Node>>& getAllNodes() const;
         void setStartNode(int col);
         Node& getStartNode();
-
+        void resetMaze();
+        
     private:
         Size size;
         std::vector<std::vector<Node>> nodes;
-        Node startNode;
+        Node* startNode = nullptr;
 }; 

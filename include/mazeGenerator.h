@@ -7,8 +7,9 @@ class MazeGenerator
     public:
         bool generateMaze(Grid& grid);
         static void generateMazeBase(Grid& grid);
+        static void generateSpawnNode(Grid& grid);
 
     private:
-        std::size_t currentRow = 0;
-        std::size_t currentCol = 0;
+        Node* current = nullptr;
+        bool started = false;
 };

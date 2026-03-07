@@ -8,7 +8,6 @@ App::App()
         sf::Style::Titlebar | sf::Style::Close),
         grid(gridWidth, gridHeight)
 {
-    MazeGenerator generator;
     generator.generateMazeBase(grid);
 }
 
@@ -45,6 +44,7 @@ void App::update()
 {
     if (!mazeGenerated)
     {
+        sf::sleep(sf::milliseconds(1));
         mazeGenerated = generator.generateMaze(grid);
     }
 }
