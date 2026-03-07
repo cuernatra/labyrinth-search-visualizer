@@ -18,7 +18,7 @@ void Visualizer::draw(sf::RenderWindow& window, const Grid& grid)
                 node.pos.row * cellSize + gap / 2.0f + margin
             );
             cell.setFillColor(getColor(node.state));
-
+            
             window.draw(cell);
         }
     }

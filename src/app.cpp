@@ -1,4 +1,5 @@
 #include "app.h"
+#include "mazeGenerator.h"
 
 App::App()
     : window(sf::VideoMode(
@@ -8,6 +9,8 @@ App::App()
         sf::Style::Titlebar | sf::Style::Close),
         grid(gridWidth, gridHeight)
 {
+    MazeGenerator generator;
+    generator.generateMaze(grid);
 }
 
 void App::run()

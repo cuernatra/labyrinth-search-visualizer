@@ -15,6 +15,7 @@ class Grid
         Grid(int width, int height);
         
         Node& getNode(int row, int col);
+        std::vector<std::vector<Node>>& getAllNodes();
         const std::vector<std::vector<Node>>& getAllNodes() const;
 
     private:

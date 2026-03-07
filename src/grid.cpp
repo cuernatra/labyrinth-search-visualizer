@@ -18,7 +18,10 @@ Node& Grid::getNode(int row, int col)
     return nodes[row][col];
 }
 
-const std::vector<std::vector<Node>>& Grid::getAllNodes() const
-{
+std::vector<std::vector<Node>>& Grid::getAllNodes() {
+    return nodes;
+}
+
+const std::vector<std::vector<Node>>& Grid::getAllNodes() const {
     return nodes;
 }
