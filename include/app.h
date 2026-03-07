@@ -2,6 +2,7 @@
 
 #include "visualizer.h"
 #include "grid.h"
+#include "mazeGenerator.h"
 
 #include <SFML/Graphics.hpp>
 
@@ -21,11 +22,14 @@ private:
 
     Grid grid;
     Visualizer visualizer;
-
+    MazeGenerator generator;
+    
     static constexpr int gridWidth = 20;
     static constexpr int gridHeight = 30;
     static constexpr int cellSize = 25;
     static constexpr int margin = 30;
 
+    bool mazeGenerated = false;
+    
     sf::RenderWindow window;
 };

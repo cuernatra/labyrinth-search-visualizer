@@ -1,5 +1,4 @@
 #include "app.h"
-#include "mazeGenerator.h"
 
 App::App()
     : window(sf::VideoMode(
@@ -10,7 +9,7 @@ App::App()
         grid(gridWidth, gridHeight)
 {
     MazeGenerator generator;
-    generator.generateMaze(grid);
+    generator.generateMazeBase(grid);
 }
 
 void App::run()
@@ -44,6 +43,10 @@ void App::processEvents()
 
 void App::update()
 {
+    if (!mazeGenerated)
+    {
+        mazeGenerated = generator.generateMaze(grid);
+    }
 }
 
 void App::render()
