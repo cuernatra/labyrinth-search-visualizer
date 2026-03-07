@@ -20,7 +20,6 @@ add_executable(labyrinth-search-visualizer
     src/main.cpp
     src/app.cpp
     src/grid.cpp
-    src/node.cpp
     src/visualizer.cpp
     src/algorithms/bfs.cpp
 )
