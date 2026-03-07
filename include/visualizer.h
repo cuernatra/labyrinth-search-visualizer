@@ -9,6 +9,7 @@ class Visualizer
         void draw(sf::RenderWindow& window, const Grid& grid);
 
     private:
-        float cellSize = 20.0f;
         float gap = 2.0f;
+
+        sf::Color getColor(NodeState state);
 };

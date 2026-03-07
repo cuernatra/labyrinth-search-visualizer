@@ -1,8 +1,8 @@
 #include "grid.h"
 
-Grid::Grid(int width, int height) : 
-    size{width, height}, 
-    nodes(height, std::vector<Node>(width))
+Grid::Grid(int width, int height) 
+    : size{width, height}, 
+        nodes(height, std::vector<Node>(width))
 {
     for (int i = 0; i < height; i++)
     {

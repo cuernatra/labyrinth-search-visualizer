@@ -11,6 +11,9 @@ public:
     App();
     void run();
 
+    static constexpr int getCellSize() { return cellSize; }
+    static constexpr int getMargin() { return margin; }
+
 private:
     void processEvents();
     void update();
@@ -18,6 +21,11 @@ private:
 
     Grid grid;
     Visualizer visualizer;
+
+    static constexpr int gridWidth = 20;
+    static constexpr int gridHeight = 30;
+    static constexpr int cellSize = 25;
+    static constexpr int margin = 30;
 
     sf::RenderWindow window;
 };

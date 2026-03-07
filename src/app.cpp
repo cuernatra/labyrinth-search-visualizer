@@ -1,8 +1,12 @@
 #include "app.h"
 
 App::App()
-    : window(sf::VideoMode(800, 600), "Labyrinth Search Visualizer"),
-    grid(20,20)
+    : window(sf::VideoMode(
+        gridWidth * cellSize + margin * 2, 
+        gridHeight * cellSize + margin * 2), 
+        "Labyrinth Search Visualizer",
+        sf::Style::Titlebar | sf::Style::Close),
+        grid(gridWidth, gridHeight)
 {
 }
 
@@ -41,7 +45,7 @@ void App::update()
 
 void App::render()
 {
-    window.clear();
+    window.clear(sf::Color(90, 90, 90));
 
     visualizer.draw(window, grid);
 
