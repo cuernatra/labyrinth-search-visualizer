@@ -12,10 +12,12 @@ struct Size
 class Grid
 {
     public:
+        Grid(int width, int height);
+        
+        Node& getNode(int row, int col);
+        const std::vector<std::vector<Node>>& getAllNodes() const;
+
+    private:
         Size size;
         std::vector<std::vector<Node>> nodes;
-
-        Grid(int width, int height);
-
-        Node& getNode(int row, int col);
 }; 

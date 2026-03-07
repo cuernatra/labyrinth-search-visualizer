@@ -1,7 +1,8 @@
 #include "app.h"
 
 App::App()
-    : window(sf::VideoMode(800, 600), "Labyrinth Search Visualizer")
+    : window(sf::VideoMode(800, 600), "Labyrinth Search Visualizer"),
+    grid(20,20)
 {
 }
 
@@ -36,11 +37,13 @@ void App::processEvents()
 
 void App::update()
 {
-    
 }
 
 void App::render()
 {
     window.clear();
+
+    visualizer.draw(window, grid);
+
     window.display();
 }
