@@ -53,6 +53,12 @@ void App::update()
         sf::sleep(sf::milliseconds(1));
         remainMazeGenerated = generator.generateRemainMaze(grid);
     }
+
+    else if (!MazeReady)
+    {
+        sf::sleep(sf::milliseconds(1));
+        MazeReady = generator.finalizeMaze(grid);
+    }
 }
 
 void App::render()

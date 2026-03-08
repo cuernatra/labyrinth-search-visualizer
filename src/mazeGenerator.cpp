@@ -330,3 +330,45 @@ bool MazeGenerator::generateRemainMaze(Grid& grid)
     stepsLeftInBranch = 0;
     return false;
 }
+
+bool MazeGenerator::finalizeMaze(Grid& grid)
+{
+    static int row = 0;
+    static int col = 0;
+
+    auto& nodes = grid.getAllNodes();
+
+    int rowCount = nodes.size();
+    int colCount = nodes[0].size();
+
+    if (row >= rowCount)
+    {
+        row = 0;
+        col = 0;
+        return true;
+    }
+
+    Node& node = nodes[row][col];
+
+    if (node.state == NodeState::DeadEnd ||
+        node.state == NodeState::Empty) 
+    {
+        node.state = NodeState::Wall;
+    }
+
+    else if (node.state == NodeState::Visited || 
+        node.state == NodeState::Backtracked)
+    {
+        node.state = NodeState::Path;
+    }
+
+    col++;
+
+    if (col >= colCount)
+    {
+        col = 0;
+        row++;
+    }
+
+    return false;
+}

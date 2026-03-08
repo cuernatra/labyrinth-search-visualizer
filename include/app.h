@@ -31,6 +31,7 @@ private:
 
     bool mazeRouteGenerated = false;
     bool remainMazeGenerated = false;
+    bool MazeReady = false;
     
     sf::RenderWindow window;
 };

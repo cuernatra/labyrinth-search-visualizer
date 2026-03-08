@@ -9,6 +9,7 @@ class MazeGenerator
         static void generateMazeBase(Grid& grid);
         bool generateMazeRoute(Grid& grid);
         bool generateRemainMaze(Grid& grid);
+        bool finalizeMaze(Grid& grid);
 
         static int countPathNeighbors(Grid& grid, int row, int col);
 
