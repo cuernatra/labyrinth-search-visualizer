@@ -53,8 +53,6 @@ void Grid::resetMaze()
             {
                 node.state = NodeState::Empty;
             }
-
-            node.clearNeighbors();
         }
     }
 

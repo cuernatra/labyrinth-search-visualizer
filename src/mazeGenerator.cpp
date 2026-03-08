@@ -4,20 +4,27 @@
 
 void MazeGenerator::generateMazeBase(Grid& grid) 
 {
-    for (auto& row : grid.getAllNodes()) {
-        for (auto& node : row) {
-            if (node.pos.row == 0 || node.pos.row == grid.getAllNodes().size() - 1 ||
-                node.pos.col == 0 || node.pos.col == grid.getAllNodes()[0].size() - 1)
+    auto& nodes = grid.getAllNodes();
+    const int rowCount = (int)nodes.size();
+    const int colCount = (int)nodes[0].size();
+
+    for (auto& row : nodes)
+    {
+        for (auto& node : row)
+        {
+            if (node.pos.row == 0 || node.pos.row == rowCount - 1 ||
+                node.pos.col == 0 || node.pos.col == colCount - 1)
             {
                 node.state = NodeState::Wall;
             }
 
-            if (node.pos.row % 2 == 0 && node.pos.col % 2 == 0) 
+            if (node.pos.row % 2 == 0 && node.pos.col % 2 == 0)
             {
                 node.state = NodeState::Wall;
             }
         }
     }
+
     generateSpawnNode(grid);
 }
 
@@ -26,17 +33,16 @@ void MazeGenerator::generateSpawnNode(Grid& grid)
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    int width = grid.getAllNodes()[0].size();
+    auto& nodes = grid.getAllNodes();
+    const int width = (int)nodes[0].size();
+
     std::uniform_int_distribution<> dist(0, width / 2 - 1);
-
-    int col = dist(gen) * 2 + 1;
-
-    int row = grid.getAllNodes().size() - 1;
+    const int col = dist(gen) * 2 + 1;
 
     grid.setStartNode(col);
 
-    printf("Start Node: (%d, %d)\n", 
-        grid.getStartNode().pos.row, 
+    printf("Start Node: (%d, %d)\n",
+        grid.getStartNode().pos.row,
         grid.getStartNode().pos.col);
 }
 
@@ -64,8 +70,9 @@ bool MazeGenerator::generateMazeRoute(Grid& grid)
 {
     static std::mt19937 rng(std::random_device{}());
 
-    int rowCount = grid.getAllNodes().size();
-    int colCount = grid.getAllNodes()[0].size();
+    auto& nodes = grid.getAllNodes();
+    int rowCount = nodes.size();
+    int colCount = nodes[0].size();
 
     if (!started)
     {
@@ -79,20 +86,37 @@ bool MazeGenerator::generateMazeRoute(Grid& grid)
     int row = current->pos.row;
     int col = current->pos.col;
 
-    std::vector<Node*> neighbors;
+    Node* neighbors[4];
+    int neighborCount = 0;
+
+    auto tryAddNeighbor = [&](int newRow, int newCol, bool allowIfCurrentRowIsOne = false)
+    {
+        if (newRow < 0 || newRow >= rowCount || newCol < 0 || newCol >= colCount)
+            return;
+
+        Node& node = grid.getNode(newRow, newCol);
+
+        if (node.state == NodeState::Empty || allowIfCurrentRowIsOne)
+        {
+            neighbors[neighborCount++] = &node;
+        }
+        else if (node.state == NodeState::Visited)
+        {
+            routeNeighbourCount++;
+        }
+    };
 
     // Up, Down, Left, Right
-    checkNeighbor(grid, row - 1, col, rowCount, colCount, neighbors, row == 1);
-    checkNeighbor(grid, row + 1, col, rowCount, colCount, neighbors);
-    checkNeighbor(grid, row, col - 1, rowCount, colCount, neighbors);
-    checkNeighbor(grid, row, col + 1, rowCount, colCount, neighbors);
+    tryAddNeighbor(row - 1, col, row == 1);
+    tryAddNeighbor(row + 1, col);
+    tryAddNeighbor(row, col - 1);
+    tryAddNeighbor(row, col + 1);
 
-    // Neighbors found
-    if (!neighbors.empty())
+    if (neighborCount > 0)
     {
         pathStack.push_back(current);
 
-        std::uniform_int_distribution<int> dist(0, (int)neighbors.size() - 1);
+        std::uniform_int_distribution<int> dist(0, neighborCount - 1);
         current = neighbors[dist(rng)];
 
         if (current->pos.row == 0 && current->state == NodeState::Wall)
@@ -108,12 +132,12 @@ bool MazeGenerator::generateMazeRoute(Grid& grid)
         return false;
     }
 
-    // Neighbors not found
     if (current->state != NodeState::Start)
     {
         if (routeNeighbourCount >= 2)
             current->state = NodeState::DeadEnd;
-        else current->state = NodeState::Backtracked;
+        else
+            current->state = NodeState::Backtracked;
 
         routeNeighbourCount = 0;
     }

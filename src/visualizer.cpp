@@ -6,19 +6,20 @@ void Visualizer::draw(sf::RenderWindow& window, const Grid& grid)
     int cellSize = App::getCellSize();
     int margin = App::getMargin();
 
+    sf::RectangleShape cell;
+    cell.setSize({cellSize - gap, cellSize - gap});
+
     for (const auto& row : grid.getAllNodes())
     {
         for (const auto& node : row)
         {
-            sf::RectangleShape cell;
-    
-            cell.setSize({cellSize - gap, cellSize - gap});
             cell.setPosition(
                 node.pos.col * cellSize + gap / 2.0f + margin,
                 node.pos.row * cellSize + gap / 2.0f + margin
             );
+
             cell.setFillColor(getColor(node.state));
-            
+
             window.draw(cell);
         }
     }

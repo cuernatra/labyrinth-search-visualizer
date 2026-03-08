@@ -26,16 +26,11 @@ void App::processEvents()
     sf::Event event;
     while (window.pollEvent(event))
     {
-        if (event.type == sf::Event::Closed)
-        {
-            window.close();
-        }
+        if (event.type == sf::Event::Closed) window.close();
 
         if (event.type == sf::Event::KeyPressed)
         {
-            if (event.key.code == sf::Keyboard::Escape) {
-                window.close();
-            }
+            if (event.key.code == sf::Keyboard::Escape) window.close();
         }
     }
 }
@@ -44,19 +39,16 @@ void App::update()
 {
     if (!mazeRouteGenerated)
     {
-        sf::sleep(sf::milliseconds(1));
         mazeRouteGenerated = generator.generateMazeRoute(grid);
     }
 
     else if (!remainMazeGenerated)
     {
-        sf::sleep(sf::milliseconds(1));
         remainMazeGenerated = generator.generateRemainMaze(grid);
     }
 
     else if (!MazeReady)
     {
-        sf::sleep(sf::milliseconds(1));
         MazeReady = generator.finalizeMaze(grid);
     }
 }
