@@ -24,9 +24,9 @@ private:
     Visualizer visualizer;
     MazeGenerator generator;
     
-    static constexpr int gridWidth = 21;
-    static constexpr int gridHeight = 31;
-    static constexpr int cellSize = 25;
+    static constexpr int gridWidth = 51;
+    static constexpr int gridHeight = 81;
+    static constexpr int cellSize = 10;
     static constexpr int margin = 30;
 
     bool mazeGenerated = false;

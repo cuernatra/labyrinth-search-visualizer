@@ -47,6 +47,11 @@ void App::update()
         sf::sleep(sf::milliseconds(1));
         mazeGenerated = generator.generateMaze(grid);
     }
+
+    else
+    {
+        
+    }
 }
 
 void App::render()

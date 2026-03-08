@@ -33,6 +33,8 @@ sf::Color Visualizer::getColor(NodeState state)
         case NodeState::Goal: return sf::Color::Red;
         case NodeState::Visited: return sf::Color::Color(100,149,237);
         case NodeState::Path: return sf::Color::Yellow;
+        case NodeState::DeadEnd: return sf::Color::Color(200,50,50);
+        case NodeState::Backtracked: return sf::Color::Color(50,50,50);
         default: return sf::Color::White;
     }
 }

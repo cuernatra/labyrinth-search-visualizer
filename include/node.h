@@ -15,7 +15,9 @@ enum class NodeState
     Start,
     Goal,
     Visited,
-    Path
+    Path,
+    DeadEnd,
+    Backtracked
 };
 
 class Node
