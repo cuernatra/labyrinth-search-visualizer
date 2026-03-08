@@ -105,7 +105,7 @@ bool MazeGenerator::generateMaze(Grid& grid)
         std::uniform_int_distribution<int> dist(0, (int)neighbors.size() - 1);
         current = neighbors[dist(rng)];
 
-        if (current->pos.row == 0)
+        if (current->pos.row == 0 && current->state == NodeState::Wall)
         {
             current->state = NodeState::Goal;
             started = false;
