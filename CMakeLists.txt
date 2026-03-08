@@ -34,3 +34,12 @@ target_link_libraries(labyrinth-search-visualizer PRIVATE
     sfml-window
     sfml-system
 )
+
+if (WIN32)
+    add_custom_command(TARGET labyrinth-search-visualizer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:labyrinth-search-visualizer>
+            $<TARGET_FILE_DIR:labyrinth-search-visualizer>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
