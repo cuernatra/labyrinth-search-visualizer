@@ -24,12 +24,12 @@ private:
     Visualizer visualizer;
     MazeGenerator generator;
     
-    static constexpr int gridWidth = 11;
-    static constexpr int gridHeight = 21;
+    static constexpr int gridWidth = 31;
+    static constexpr int gridHeight = 51;
     static constexpr int cellSize = 15;
     static constexpr int margin = 30;
 
-    bool mazeGenerated = false;
+    bool mazeRouteGenerated = false;
     
     sf::RenderWindow window;
 };

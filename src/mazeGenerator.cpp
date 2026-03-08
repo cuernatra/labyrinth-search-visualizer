@@ -39,7 +39,27 @@ void MazeGenerator::generateSpawnNode(Grid& grid)
         grid.getStartNode().pos.col);
 }
 
-bool MazeGenerator::generateMaze(Grid& grid)
+void MazeGenerator::checkNeighbor(
+    Grid& grid,
+    int newRow,
+    int newCol,
+    int rowCount,
+    int colCount,
+    std::vector<Node*>& neighbors,
+    bool allowIfCurrentRowIsOne)
+{
+    if (newRow < 0 || newRow >= rowCount || newCol < 0 || newCol >= colCount)
+        return;
+
+    Node& node = grid.getNode(newRow, newCol);
+
+    if (node.state == NodeState::Empty || allowIfCurrentRowIsOne)
+        neighbors.push_back(&node);
+    else if (node.state == NodeState::Visited)
+        routeNeighbourCount++;
+}
+
+bool MazeGenerator::generateMazeRoute(Grid& grid)
 {
     static std::mt19937 rng(std::random_device{}());
 
@@ -60,42 +80,11 @@ bool MazeGenerator::generateMaze(Grid& grid)
 
     std::vector<Node*> neighbors;
 
-    if (row - 1 >= 0)
-    {
-        Node& up = grid.getNode(row - 1, col);
-
-        if (up.state == NodeState::Empty || row == 1)
-            neighbors.push_back(&up);
-        else if (up.state == NodeState::Visited)
-            routeNeighbourCount++;
-    }
-
-    if (row + 1 < rowCount)
-    {
-        Node& down = grid.getNode(row + 1, col);
-        if (down.state == NodeState::Empty)
-            neighbors.push_back(&down);
-        else if (down.state == NodeState::Visited)
-            routeNeighbourCount++;
-    }
-
-    if (col - 1 >= 0)
-    {
-        Node& left = grid.getNode(row, col - 1);
-        if (left.state == NodeState::Empty)
-            neighbors.push_back(&left);
-        else if (left.state == NodeState::Visited)
-            routeNeighbourCount++;
-    }
-
-    if (col + 1 < colCount)
-    {
-        Node& right = grid.getNode(row, col + 1);
-        if (right.state == NodeState::Empty)
-            neighbors.push_back(&right);
-        else if (right.state == NodeState::Visited)
-            routeNeighbourCount++;
-    }
+    // Up, Down, Left, Right
+    checkNeighbor(grid, row - 1, col, rowCount, colCount, neighbors, row == 1);
+    checkNeighbor(grid, row + 1, col, rowCount, colCount, neighbors);
+    checkNeighbor(grid, row, col - 1, rowCount, colCount, neighbors);
+    checkNeighbor(grid, row, col + 1, rowCount, colCount, neighbors);
 
     // Neighbors found
     if (!neighbors.empty())

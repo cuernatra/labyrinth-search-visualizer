@@ -42,15 +42,10 @@ void App::processEvents()
 
 void App::update()
 {
-    if (!mazeGenerated)
+    if (!mazeRouteGenerated)
     {
         sf::sleep(sf::milliseconds(1));
-        mazeGenerated = generator.generateMaze(grid);
-    }
-
-    else
-    {
-        
+        mazeRouteGenerated = generator.generateMazeRoute(grid);
     }
 }
 
