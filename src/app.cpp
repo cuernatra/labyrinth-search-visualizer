@@ -47,6 +47,12 @@ void App::update()
         sf::sleep(sf::milliseconds(1));
         mazeRouteGenerated = generator.generateMazeRoute(grid);
     }
+
+    else if (!remainMazeGenerated)
+    {
+        sf::sleep(sf::milliseconds(1));
+        remainMazeGenerated = generator.generateRemainMaze(grid);
+    }
 }
 
 void App::render()

@@ -30,6 +30,7 @@ private:
     static constexpr int margin = 30;
 
     bool mazeRouteGenerated = false;
+    bool remainMazeGenerated = false;
     
     sf::RenderWindow window;
 };

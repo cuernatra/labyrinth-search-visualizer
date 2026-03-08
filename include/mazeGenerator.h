@@ -21,9 +21,12 @@ class MazeGenerator
             std::vector<Node*>& neighbors,
             bool allowIfCurrentRowIsOne = false);
 
+        const std::vector<Node*> getPathStack() const { return pathStack; }
+
     private:
         std::vector<Node*> pathStack;
         Node* current = nullptr;
         bool started = false;
         int routeNeighbourCount = 0;
+        size_t remainSeedIndex = 0;
 };

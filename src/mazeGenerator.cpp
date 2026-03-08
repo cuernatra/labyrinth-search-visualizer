@@ -1,5 +1,6 @@
 #include "mazeGenerator.h"
 #include <random>
+#include <algorithm>
 
 void MazeGenerator::generateMazeBase(Grid& grid) 
 {
@@ -125,5 +126,207 @@ bool MazeGenerator::generateMazeRoute(Grid& grid)
     }
 
     started = false;
+    return false;
+}
+
+bool MazeGenerator::generateRemainMaze(Grid& grid)
+{
+    static std::mt19937 rng(std::random_device{}());
+
+    static bool remainStarted = false;
+    static bool exploringBranch = false;
+
+    static std::vector<Node*> routeNodes;
+    static std::vector<Node*> expandableNodes;
+    static std::vector<Node*> branchStack;
+
+    static int stepsLeftInBranch = 0;
+    static Node* lastSeed = nullptr;
+
+    int rowCount = grid.getAllNodes().size();
+    int colCount = grid.getAllNodes()[0].size();
+
+    auto isPath = [](NodeState state) -> bool
+    {
+        return state == NodeState::Start ||
+               state == NodeState::Goal ||
+               state == NodeState::Visited ||
+               state == NodeState::Backtracked ||
+               state == NodeState::DeadEnd;
+    };
+
+    auto countPathNeighborsLocal = [&](int row, int col) -> int
+    {
+        int count = 0;
+
+        if (row - 1 >= 0 && isPath(grid.getNode(row - 1, col).state)) count++;
+        if (row + 1 < rowCount && isPath(grid.getNode(row + 1, col).state)) count++;
+        if (col - 1 >= 0 && isPath(grid.getNode(row, col - 1).state)) count++;
+        if (col + 1 < colCount && isPath(grid.getNode(row, col + 1).state)) count++;
+
+        return count;
+    };
+
+    auto collectValidNeighbors = [&](Node* node) -> std::vector<Node*>
+    {
+        std::vector<Node*> neighbors;
+        int row = node->pos.row;
+        int col = node->pos.col;
+
+        auto tryAdd = [&](int nr, int nc)
+        {
+            if (nr < 0 || nr >= rowCount || nc < 0 || nc >= colCount)
+                return;
+
+            Node& candidate = grid.getNode(nr, nc);
+
+            if (candidate.state != NodeState::Empty)
+                return;
+
+            if (countPathNeighborsLocal(nr, nc) <= 1)
+                neighbors.push_back(&candidate);
+            else candidate.state = NodeState::DeadEnd;
+        };
+
+        tryAdd(row - 1, col);
+        tryAdd(row + 1, col);
+        tryAdd(row, col - 1);
+        tryAdd(row, col + 1);
+
+        return neighbors;
+    };
+
+    auto containsNode = [](const std::vector<Node*>& vec, Node* node) -> bool
+    {
+        for (Node* n : vec)
+        {
+            if (n == node)
+                return true;
+        }
+        return false;
+    };
+
+    auto removeNodesWithoutNeighbors = [&](std::vector<Node*>& vec)
+    {
+        vec.erase(
+            std::remove_if(vec.begin(), vec.end(),
+                [&](Node* node)
+                {
+                    return node == nullptr || collectValidNeighbors(node).empty();
+                }),
+            vec.end());
+    };
+
+    if (!remainStarted)
+    {
+        routeNodes = getPathStack();
+
+        if (!routeNodes.empty())
+            routeNodes.pop_back();
+
+        else return true;
+
+        expandableNodes.clear();
+        branchStack.clear();
+        exploringBranch = false;
+        stepsLeftInBranch = 0;
+        lastSeed = nullptr;
+
+        remainStarted = true;
+        return false;
+    }
+
+    removeNodesWithoutNeighbors(routeNodes);
+    removeNodesWithoutNeighbors(expandableNodes);
+
+    if (!exploringBranch)
+    {
+        std::vector<Node*> possibleSeeds;
+
+        for (Node* node : routeNodes)
+        {
+            if (!containsNode(possibleSeeds, node))
+                possibleSeeds.push_back(node);
+        }
+
+        for (Node* node : expandableNodes)
+        {
+            if (!containsNode(possibleSeeds, node))
+            {
+                possibleSeeds.push_back(node);
+            }
+
+        }
+
+        if (possibleSeeds.empty())
+        {
+            remainStarted = false;
+            branchStack.clear();
+            return true;
+        }
+
+        if (possibleSeeds.size() > 1 && lastSeed != nullptr)
+        {
+            std::vector<Node*> filtered;
+            for (Node* seed : possibleSeeds)
+            {
+                if (seed != lastSeed)
+                    filtered.push_back(seed);
+            }
+
+            if (!filtered.empty())
+                possibleSeeds = filtered;
+        }
+
+        std::uniform_int_distribution<int> seedDist(0, (int)possibleSeeds.size() - 1);
+        current = possibleSeeds[seedDist(rng)];
+        lastSeed = current;
+
+        branchStack.clear();
+        exploringBranch = true;
+
+        int maxSteps = std::max(1, (rowCount * colCount) / 20);
+        std::uniform_int_distribution<int> stepDist(1, maxSteps);
+        stepsLeftInBranch = stepDist(rng);
+
+        return false;
+    }
+
+    if (stepsLeftInBranch <= 0)
+    {
+        exploringBranch = false;
+        branchStack.clear();
+        return false;
+    }
+
+    std::vector<Node*> neighbors = collectValidNeighbors(current);
+
+    if (!neighbors.empty())
+    {
+        branchStack.push_back(current);
+
+        std::uniform_int_distribution<int> dist(0, (int)neighbors.size() - 1);
+        current = neighbors[dist(rng)];
+
+        if (current->state != NodeState::Start && current->state != NodeState::Goal)
+            current->state = NodeState::Visited;
+
+        if (!containsNode(expandableNodes, current))
+            expandableNodes.push_back(current);
+
+        stepsLeftInBranch--;
+        return false;
+    }
+
+    if (!branchStack.empty())
+    {
+        current = branchStack.back();
+        branchStack.pop_back();
+        stepsLeftInBranch--;
+        return false;
+    }
+
+    exploringBranch = false;
+    stepsLeftInBranch = 0;
     return false;
 }
