@@ -400,3 +400,16 @@ bool MazeGenerator::finalizeMaze(Grid& grid)
 
     return false;
 }
+
+void MazeGenerator::startFromTheScratch(Grid& grid)
+{
+    getPathStack().clear();
+    current = nullptr;
+    started = false;
+    routeNeighbourCount = 0;
+    remainSeedIndex = 0;
+
+    grid.resize(grid.getWidth(), grid.getHeight());
+
+    generateMazeBase(grid);
+}

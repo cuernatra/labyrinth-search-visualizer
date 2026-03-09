@@ -16,6 +16,8 @@ public:
 
     void updateLayout();
 
+    void resetApp(bool loadSelectedMaze);
+
 private:
     void processEvents();
     void update();
@@ -25,15 +27,18 @@ private:
     Visualizer visualizer;
     MazeGenerator generator;
 
-    static constexpr int defaultGridWidth = 41;
-    static constexpr int defaultGridHeight = 61;
+    static constexpr int defaultGridWidth = 31;
+    static constexpr int defaultGridHeight = 51;
 
     int cellSize = 15;
+
+    bool possibleToContinue = false;
+    bool possibleToStart = true;
 
     int selectedMazeId = 0;
     bool selectMaze = false;
 
-    static constexpr int marginX = 140;
+    static constexpr int marginX = 200;
     static constexpr int marginY = 20;
 
     static constexpr int maxGridPixels = 950;
@@ -41,6 +46,8 @@ private:
     bool mazeRouteGenerated = false;
     bool remainMazeGenerated = false;
     bool MazeReady = false;
+
+    bool paused = true;
 
     sf::RenderWindow window;
 };
