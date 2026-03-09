@@ -23,6 +23,7 @@ add_executable(labyrinth-search-visualizer
     src/visualizer.cpp
     src/algorithms/bfs.cpp
     src/mazeGenerator.cpp
+    src/mazeStorage.cpp
 )
 
 target_include_directories(labyrinth-search-visualizer PRIVATE

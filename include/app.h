@@ -12,8 +12,10 @@ public:
     App();
     void run();
 
-    static constexpr int getCellSize() { return cellSize; }
-    static constexpr int getMargin() { return margin; }
+    int getCellSize() const { return cellSize; }
+    int getMargin() const { return margin; }
+
+    void updateLayout();
 
 private:
     void processEvents();
@@ -23,15 +25,23 @@ private:
     Grid grid;
     Visualizer visualizer;
     MazeGenerator generator;
-    
-    static constexpr int gridWidth = 31;
-    static constexpr int gridHeight = 51;
-    static constexpr int cellSize = 15;
+
+    static constexpr int defaultGridWidth = 21;
+    static constexpr int defaultGridHeight = 31;
+
+    int cellSize = 15;
+
+    int selectedMazeId = 2;
+    bool selectMaze = true;
+
     static constexpr int margin = 30;
+
+    static constexpr int maxGridPixelWidth = 800;
+    static constexpr int maxGridPixelHeight = 800;
 
     bool mazeRouteGenerated = false;
     bool remainMazeGenerated = false;
     bool MazeReady = false;
-    
+
     sf::RenderWindow window;
 };

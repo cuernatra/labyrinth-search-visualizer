@@ -6,7 +6,7 @@
 class Visualizer
 {
     public:
-        void draw(sf::RenderWindow& window, const Grid& grid);
+        void draw(sf::RenderWindow& window, const Grid& grid, int cellSize, int margin);
 
     private:
         float gap = 2.0f;

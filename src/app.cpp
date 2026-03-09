@@ -1,14 +1,52 @@
 #include "app.h"
+#include "mazeStorage.h"
+
+#include <algorithm>
 
 App::App()
-    : window(sf::VideoMode(
-        gridWidth * cellSize + margin * 2, 
-        gridHeight * cellSize + margin * 2), 
-        "Labyrinth Search Visualizer",
-        sf::Style::Titlebar | sf::Style::Close),
-        grid(gridWidth, gridHeight)
+    : grid(defaultGridWidth, defaultGridHeight)
 {
-    generator.generateMazeBase(grid);
+    if (!selectMaze)
+    {
+        generator.generateMazeBase(grid);
+    }
+    else
+    {
+        bool loaded = MazeStorage::loadMaze(grid, selectedMazeId);
+
+        if (loaded)
+        {
+            mazeRouteGenerated = true;
+            remainMazeGenerated = true;
+            MazeReady = true;
+        }
+        else
+        {
+            generator.generateMazeBase(grid);
+        }
+    }
+
+    updateLayout();
+}
+
+void App::updateLayout()
+{
+    int sizeFromWidth = maxGridPixelWidth / grid.getWidth();
+    int sizeFromHeight = maxGridPixelHeight / grid.getHeight();
+
+    cellSize = std::min(sizeFromWidth, sizeFromHeight);
+
+    if (cellSize < 1)
+        cellSize = 1;
+
+    int windowWidth = grid.getWidth() * cellSize + margin * 2;
+    int windowHeight = grid.getHeight() * cellSize + margin * 2;
+
+    window.create(
+        sf::VideoMode(windowWidth, windowHeight),
+        "Labyrinth Search Visualizer",
+        sf::Style::Titlebar | sf::Style::Close
+    );
 }
 
 void App::run()
@@ -37,27 +75,26 @@ void App::processEvents()
 
 void App::update()
 {
-    if (!mazeRouteGenerated)
+    if (!selectMaze)
     {
-        mazeRouteGenerated = generator.generateMazeRoute(grid);
-    }
-
-    else if (!remainMazeGenerated)
-    {
-        remainMazeGenerated = generator.generateRemainMaze(grid);
-    }
-
-    else if (!MazeReady)
-    {
-        MazeReady = generator.finalizeMaze(grid);
+        if (!mazeRouteGenerated)
+        {
+            mazeRouteGenerated = generator.generateMazeRoute(grid);
+        }
+        else if (!remainMazeGenerated)
+        {
+            remainMazeGenerated = generator.generateRemainMaze(grid);
+        }
+        else if (!MazeReady)
+        {
+            MazeReady = generator.finalizeMaze(grid);
+        }
     }
 }
 
 void App::render()
 {
     window.clear(sf::Color(90, 90, 90));
-
-    visualizer.draw(window, grid);
-
+    visualizer.draw(window, grid, cellSize, margin);
     window.display();
 }

@@ -1,4 +1,5 @@
 #include "mazeGenerator.h"
+#include "mazeStorage.h"
 #include <random>
 #include <algorithm>
 
@@ -369,6 +370,9 @@ bool MazeGenerator::finalizeMaze(Grid& grid)
     {
         row = 0;
         col = 0;
+
+        MazeStorage::saveMaze(grid);
+
         return true;
     }
 
