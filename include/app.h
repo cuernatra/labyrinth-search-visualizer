@@ -25,8 +25,8 @@ private:
     Visualizer visualizer;
     MazeGenerator generator;
 
-    static constexpr int defaultGridWidth = 21;
-    static constexpr int defaultGridHeight = 31;
+    static constexpr int defaultGridWidth = 41;
+    static constexpr int defaultGridHeight = 61;
 
     int cellSize = 15;
 
