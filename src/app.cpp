@@ -31,22 +31,24 @@ App::App()
 
 void App::updateLayout()
 {
-    int sizeFromWidth = maxGridPixelWidth / grid.getWidth();
-    int sizeFromHeight = maxGridPixelHeight / grid.getHeight();
+    int sizeFromWidth  = (maxGridPixels - marginX * 2) / grid.getWidth();
+    int sizeFromHeight = (maxGridPixels - marginY * 2) / grid.getHeight();
 
     cellSize = std::min(sizeFromWidth, sizeFromHeight);
 
     if (cellSize < 1)
         cellSize = 1;
 
-    int windowWidth = grid.getWidth() * cellSize + margin * 2;
-    int windowHeight = grid.getHeight() * cellSize + margin * 2;
+    int windowWidth  = grid.getWidth()  * cellSize + marginX * 2;
+    int windowHeight = grid.getHeight() * cellSize + marginY * 2;
 
     window.create(
         sf::VideoMode(windowWidth, windowHeight),
         "Labyrinth Search Visualizer",
         sf::Style::Titlebar | sf::Style::Close
     );
+
+    window.setPosition(sf::Vector2i(500, 25));
 }
 
 void App::run()
@@ -95,6 +97,6 @@ void App::update()
 void App::render()
 {
     window.clear(sf::Color(90, 90, 90));
-    visualizer.draw(window, grid, cellSize, margin);
+    visualizer.draw(window, grid, cellSize, marginX, marginY);
     window.display();
 }

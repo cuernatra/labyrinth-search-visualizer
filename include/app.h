@@ -13,7 +13,6 @@ public:
     void run();
 
     int getCellSize() const { return cellSize; }
-    int getMargin() const { return margin; }
 
     void updateLayout();
 
@@ -31,13 +30,13 @@ private:
 
     int cellSize = 15;
 
-    int selectedMazeId = 2;
-    bool selectMaze = true;
+    int selectedMazeId = 0;
+    bool selectMaze = false;
 
-    static constexpr int margin = 30;
+    static constexpr int marginX = 140;
+    static constexpr int marginY = 20;
 
-    static constexpr int maxGridPixelWidth = 800;
-    static constexpr int maxGridPixelHeight = 800;
+    static constexpr int maxGridPixels = 950;
 
     bool mazeRouteGenerated = false;
     bool remainMazeGenerated = false;

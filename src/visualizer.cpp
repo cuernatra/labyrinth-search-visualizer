@@ -1,8 +1,11 @@
 #include "visualizer.h"
 #include "app.h"
 
-void Visualizer::draw(sf::RenderWindow& window, const Grid& grid, int cellSize, int margin)
+void Visualizer::draw(sf::RenderWindow& window, const Grid& grid, int cellSize, int marginX, int marginY)
 {
+    float offsetX = static_cast<float>(marginX);
+    float offsetY = static_cast<float>(marginY);
+
     sf::RectangleShape cell;
     cell.setSize({ cellSize - gap, cellSize - gap });
 
@@ -11,8 +14,8 @@ void Visualizer::draw(sf::RenderWindow& window, const Grid& grid, int cellSize, 
         for (const auto& node : row)
         {
             cell.setPosition(
-                node.pos.col * cellSize + gap / 2.0f + margin,
-                node.pos.row * cellSize + gap / 2.0f + margin
+                node.pos.col * cellSize + gap / 2.0f + offsetX,
+                node.pos.row * cellSize + gap / 2.0f + offsetY
             );
 
             cell.setFillColor(getColor(node.state));
