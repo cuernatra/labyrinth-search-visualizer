@@ -5,6 +5,8 @@
 #include "mazeGenerator.h"
 
 #include <SFML/Graphics.hpp>
+#include <vector>
+#include <string>
 
 class App
 {
@@ -18,6 +20,8 @@ public:
 
     void resetApp(bool loadSelectedMaze);
 
+    void refreshMazeIds();
+
 private:
     void processEvents();
     void update();
@@ -27,15 +31,24 @@ private:
     Visualizer visualizer;
     MazeGenerator generator;
 
-    static constexpr int defaultGridWidth = 31;
-    static constexpr int defaultGridHeight = 51;
+    static constexpr int defaultGridWidth = 21;
+    static constexpr int defaultGridHeight = 31;
+    static constexpr int minMazeDimension = 15;
 
     int cellSize = 15;
 
     bool possibleToContinue = false;
     bool possibleToStart = true;
 
-    int selectedMazeId = 0;
+    int selectedMazeId = 20;
+    int selectedMazeIndex = -1;
+    int newMazeWidth = defaultGridWidth;
+    int newMazeHeight = defaultGridHeight;
+    int loadedMazeId = -1;
+    int generatedMazeId = -1;
+    bool generatingNewMaze = false;
+    std::vector<int> mazeIds;
+    std::vector<std::string> mazeIdLabels;
     bool selectMaze = false;
 
     static constexpr int marginX = 200;

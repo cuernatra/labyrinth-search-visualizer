@@ -2,12 +2,15 @@
 #include "mazeStorage.h"
 
 #include <algorithm>
+#include <string>
 #include <imgui.h>
 #include <imgui-SFML.h>
 
 App::App()
     : grid(defaultGridWidth, defaultGridHeight)
 {
+    refreshMazeIds();
+
     if (!selectMaze)
     {
         generator.generateMazeBase(grid);
@@ -18,6 +21,7 @@ App::App()
 
         if (loaded)
         {
+            possibleToStart = false;
             mazeRouteGenerated = true;
             remainMazeGenerated = true;
             MazeReady = true;
@@ -29,6 +33,79 @@ App::App()
     }
 
     updateLayout();
+    newMazeWidth = grid.getWidth();
+    newMazeHeight = grid.getHeight();
+    ImGui::SFML::Init(window);
+}
+
+void App::refreshMazeIds()
+{
+    mazeIds = MazeStorage::getAvailableMazeIds();
+    mazeIdLabels.clear();
+
+    for (int id : mazeIds)
+        mazeIdLabels.push_back("Maze #" + std::to_string(id));
+
+    if (mazeIds.empty())
+    {
+        selectedMazeIndex = -1;
+        selectedMazeId = -1;
+        return;
+    }
+
+    if (selectedMazeId >= 0)
+    {
+        auto selectedIt = std::find(mazeIds.begin(), mazeIds.end(), selectedMazeId);
+
+        if (selectedIt != mazeIds.end())
+        {
+            selectedMazeIndex = static_cast<int>(std::distance(mazeIds.begin(), selectedIt));
+            return;
+        }
+    }
+
+    selectedMazeIndex = -1;
+    selectedMazeId = -1;
+}
+
+void App::resetApp(bool loadSelectedMaze)
+{
+    paused = true;
+    possibleToContinue = false;
+
+    mazeRouteGenerated = false;
+    remainMazeGenerated = false;
+    MazeReady = false;
+
+    if (loadSelectedMaze && selectedMazeId >= 0)
+    {
+        selectMaze = true;
+        bool loaded = MazeStorage::loadMaze(grid, selectedMazeId);
+
+        if (loaded)
+        {
+            mazeRouteGenerated = true;
+            remainMazeGenerated = true;
+            MazeReady = true;
+            possibleToStart = true;
+            updateLayout();
+            newMazeWidth = grid.getWidth();
+            newMazeHeight = grid.getHeight();
+            loadedMazeId = selectedMazeId;
+            generatedMazeId = -1;
+            generatingNewMaze = false;
+            return;
+        }
+    }
+
+    selectMaze = false;
+    possibleToStart = true;
+    loadedMazeId = -1;
+    generatedMazeId = -1;
+    generatingNewMaze = false;
+    selectedMazeIndex = -1;
+    selectedMazeId = -1;
+    generator.startFromTheScratch(grid);
 }
 
 void App::updateLayout()
@@ -51,7 +128,6 @@ void App::updateLayout()
     );
 
     window.setPosition(sf::Vector2i(500, 25));
-    ImGui::SFML::Init(window);
 }
 
 void App::run()
@@ -105,6 +181,21 @@ void App::update()
         else if (!MazeReady)
         {
             MazeReady = generator.finalizeMaze(grid);
+
+            if (MazeReady)
+            {
+                refreshMazeIds();
+
+                if (!mazeIds.empty())
+                    generatedMazeId = mazeIds.back();
+                else
+                    generatedMazeId = -1;
+
+                selectedMazeIndex = -1;
+                selectedMazeId = -1;
+                generatingNewMaze = false;
+                loadedMazeId = -1;
+            }
         }
     }
 }
@@ -143,15 +234,120 @@ void App::render()
             remainMazeGenerated = false;
             MazeReady = false;
             possibleToStart = false;
+            generatingNewMaze = true;
+            loadedMazeId = -1;
+            generatedMazeId = -1;
+            selectedMazeIndex = -1;
+            selectedMazeId = -1;
         }
     }
 
     ImGui::End();
 
     float bottomPanelHeight = 70.f;
-    float bottomPanelY = static_cast<float>(window.getSize().y) - static_cast<float>(marginY) + 10.f;
+    float bottomPanelY = static_cast<float>(window.getSize().y) - bottomPanelHeight - 10.f;
 
-    bottomPanelY = static_cast<float>(window.getSize().y) - bottomPanelHeight - 10.f;
+    const float topPanelY = static_cast<float>(marginY) * 0.2f;
+    const float topPanelHeight = 70.f;
+
+    const float middlePanelY = topPanelY + topPanelHeight + 8.f;
+    const float availableMiddleHeight = bottomPanelY - middlePanelY - 8.f;
+    const float middlePanelHeight = availableMiddleHeight;
+
+    ImGui::SetNextWindowPos(ImVec2(leftPanelX, middlePanelY), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(leftPanelWidth, middlePanelHeight), ImGuiCond_Always);
+
+    ImGui::Begin("Maze Selection", nullptr,
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoMove);
+
+    ImGui::TextUnformatted("Create maze size");
+
+    const float inputWidth = leftPanelWidth - 90.f;
+    ImGui::PushItemWidth(inputWidth > 70.f ? inputWidth : 70.f);
+    ImGui::InputInt("Width", &newMazeWidth, 2, 2);
+    ImGui::InputInt("Height", &newMazeHeight, 2, 2);
+    ImGui::PopItemWidth();
+
+    if (newMazeWidth < minMazeDimension)
+        newMazeWidth = minMazeDimension;
+
+    if (newMazeHeight < minMazeDimension)
+        newMazeHeight = minMazeDimension;
+
+    if (newMazeWidth % 2 == 0)
+        newMazeWidth += 1;
+
+    if (newMazeHeight % 2 == 0)
+        newMazeHeight += 1;
+
+    ImGui::TextWrapped("Size must be odd and at least 15x15.");
+
+    if (ImGui::Button("Create new maze", ImVec2(leftPanelWidth - 28.f, 26.f)))
+    {
+        grid.resize(newMazeWidth, newMazeHeight);
+        updateLayout();
+        resetApp(false);
+        paused = false;
+        possibleToStart = false;
+        generatingNewMaze = true;
+    }
+
+    ImGui::Separator();
+    ImGui::TextUnformatted("Saved mazes");
+
+    if (mazeIds.empty())
+    {
+        ImGui::TextWrapped("No saved mazes found.");
+    }
+    else
+    {
+        int previousIndex = selectedMazeIndex;
+        const char* preview = (selectedMazeIndex >= 0 && selectedMazeIndex < static_cast<int>(mazeIdLabels.size()))
+            ? mazeIdLabels[selectedMazeIndex].c_str()
+            : "Select maze";
+
+        if (ImGui::BeginCombo("##SavedMaze", preview, ImGuiComboFlags_HeightSmall))
+        {
+            for (int i = 0; i < static_cast<int>(mazeIds.size()); ++i)
+            {
+                bool isSelected = (selectedMazeIndex == i);
+
+                if (ImGui::Selectable(mazeIdLabels[i].c_str(), isSelected))
+                {
+                    selectedMazeIndex = i;
+                }
+
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+
+            ImGui::EndCombo();
+        }
+
+        if (selectedMazeIndex != previousIndex)
+        {
+            if (selectedMazeIndex >= 0 && selectedMazeIndex < static_cast<int>(mazeIds.size()))
+            {
+                selectedMazeId = mazeIds[selectedMazeIndex];
+                resetApp(true);
+            }
+        }
+
+        std::string statusText = "Status: None";
+
+        if (generatingNewMaze)
+            statusText = "Status: Generating";
+        else if (loadedMazeId >= 0)
+            statusText = "Status: Loaded #" + std::to_string(loadedMazeId);
+        else if (generatedMazeId >= 0)
+            statusText = "Status: Generated #" + std::to_string(generatedMazeId);
+
+        ImGui::TextUnformatted(statusText.c_str());
+    }
+
+    ImGui::End();
 
     ImGui::SetNextWindowPos(ImVec2(leftPanelX, bottomPanelY), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(leftPanelWidth, bottomPanelHeight), ImGuiCond_Always);
@@ -161,21 +357,11 @@ void App::render()
         ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoMove);
 
-    float buttonWidth = (leftPanelWidth - 40.f) / 3.f;
+    float buttonWidth = (leftPanelWidth - 35.f) / 3.f;
 
     if (ImGui::Button("Reset", ImVec2(buttonWidth, 30.f)))
     {
-        paused = true;
-
-        mazeRouteGenerated = false;
-        remainMazeGenerated = false;
-        MazeReady = false;
-
-        possibleToStart = true;
-        possibleToContinue = false;
-        selectMaze = false;
-
-        generator.startFromTheScratch(grid);
+        resetApp(false);
     }
 
     ImGui::SameLine();
@@ -190,7 +376,7 @@ void App::render()
 
     ImGui::SameLine();
 
-    if (ImGui::Button("Continue", ImVec2(buttonWidth, 30.f)))
+    if (ImGui::Button("Resume", ImVec2(buttonWidth, 30.f)))
     {
         if (possibleToContinue)
         {

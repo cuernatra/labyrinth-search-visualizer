@@ -144,3 +144,27 @@ bool MazeStorage::loadMaze(Grid& grid, int targetId)
 
     return false;
 }
+
+std::vector<int> MazeStorage::getAvailableMazeIds()
+{
+    std::vector<int> ids;
+
+    std::ifstream file("mazes.txt");
+    if (!file.is_open())
+        return ids;
+
+    std::string line;
+
+    while (std::getline(file, line))
+    {
+        std::stringstream ss(line);
+        std::string token;
+
+        if (std::getline(ss, token, ';'))
+        {
+            ids.push_back(std::stoi(token));
+        }
+    }
+
+    return ids;
+}
