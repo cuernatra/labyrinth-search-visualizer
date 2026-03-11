@@ -2,6 +2,7 @@
 #include "mazeStorage.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cmath>
 #include <string>
 #include <imgui.h>
@@ -74,6 +75,10 @@ void App::resetApp(bool loadSelectedMaze)
     paused = true;
     possibleToContinue = false;
     generationStepAccumulator = 0.f;
+    bfs.reset(grid);
+    bfsRunning = false;
+    bfsElapsedSeconds = 0.f;
+    algorithmStatus = "Algorithm idle.";
 
     mazeRouteGenerated = false;
     remainMazeGenerated = false;
@@ -168,10 +173,7 @@ void App::processEvents()
 
 void App::update(float deltaSeconds)
 {
-    if (paused)
-        return;
-
-    if (!selectMaze)
+    if (!paused && !selectMaze)
     {
         generationStepAccumulator += generationStepsPerSecond * deltaSeconds;
         generationStepAccumulator = std::min(generationStepAccumulator, static_cast<float>(maxGenerationStepsPerUpdate));
@@ -222,6 +224,35 @@ void App::update(float deltaSeconds)
             }
 
             break;
+        }
+    }
+
+    if (bfsRunning)
+    {
+        bfsElapsedSeconds += deltaSeconds;
+
+        Bfs::StepResult result = bfs.step(grid, bfsStepsPerUpdate);
+
+        if (result == Bfs::StepResult::Found)
+        {
+            bfsRunning = false;
+
+            char buffer[128];
+            std::snprintf(buffer, sizeof(buffer), "BFS finished: path found in %.3f s.", bfsElapsedSeconds);
+            algorithmStatus = buffer;
+        }
+        else if (result == Bfs::StepResult::NoPath)
+        {
+            bfsRunning = false;
+
+            char buffer[128];
+            std::snprintf(buffer, sizeof(buffer), "BFS finished: no path in %.3f s.", bfsElapsedSeconds);
+            algorithmStatus = buffer;
+        }
+        else if (result == Bfs::StepResult::InvalidMaze)
+        {
+            bfsRunning = false;
+            algorithmStatus = "BFS could not continue (invalid maze state).";
         }
     }
 }
@@ -398,6 +429,69 @@ void App::render()
             possibleToContinue = false;
         }
     }
+
+    ImGui::End();
+
+    float rightPanelWidth = leftPanelWidth;
+    float rightPanelX = static_cast<float>(window.getSize().x) - rightPanelWidth - padding;
+
+    const float rightMainPanelHeight = std::max(120.f, static_cast<float>(window.getSize().y) - controlsPanelY - padding);
+
+    ImGui::SetNextWindowPos(ImVec2(rightPanelX, controlsPanelY), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(rightPanelWidth, rightMainPanelHeight), ImGuiCond_Always);
+
+    ImGui::Begin("Algorithms", nullptr,
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoMove);
+
+    ImGui::TextUnformatted("Algorithm selection");
+
+    const char* algorithms[] = { "BFS" };
+    ImGui::Combo("##AlgorithmCombo", &selectedAlgorithmIndex, algorithms, IM_ARRAYSIZE(algorithms));
+
+    if (ImGui::Button("Run selected algorithm", ImVec2(rightPanelWidth - 20.f, 30.f)))
+    {
+        if (!MazeReady)
+        {
+            algorithmStatus = "Maze is not ready yet. Generate or load one first.";
+        }
+        else
+        {
+            bfs.reset(grid);
+            bfsElapsedSeconds = 0.f;
+
+            if (bfs.start(grid))
+            {
+                bfsRunning = true;
+                algorithmStatus = "BFS running...";
+            }
+            else
+            {
+                bfsRunning = false;
+                algorithmStatus = "BFS could not start (missing Start/Goal).";
+            }
+        }
+    }
+
+    ImGui::PushItemWidth(rightPanelWidth - 28.f);
+    ImGui::SliderInt("BFS steps/update", &bfsStepsPerUpdate, 1, 200, "%d");
+    ImGui::InputInt("##BfsStepsInput", &bfsStepsPerUpdate, 1, 10);
+    ImGui::PopItemWidth();
+
+    if (bfsStepsPerUpdate < 1)
+        bfsStepsPerUpdate = 1;
+
+    if (bfsStepsPerUpdate > 200)
+        bfsStepsPerUpdate = 200;
+
+    ImGui::Separator();
+    ImGui::TextWrapped("%s", algorithmStatus.c_str());
+
+    ImGui::Separator();
+
+    ImGui::TextUnformatted("BFS elapsed time");
+    ImGui::Text("%.3f s", bfsElapsedSeconds);
 
     ImGui::End();
 
