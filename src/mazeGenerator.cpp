@@ -158,16 +158,6 @@ bool MazeGenerator::generateRemainMaze(Grid& grid)
 {
     static std::mt19937 rng(std::random_device{}());
 
-    static bool remainStarted = false;
-    static bool exploringBranch = false;
-
-    static std::vector<Node*> routeNodes;
-    static std::vector<Node*> expandableNodes;
-    static std::vector<Node*> branchStack;
-
-    static int stepsLeftInBranch = 0;
-    static Node* lastSeed = nullptr;
-
     int rowCount = grid.getAllNodes().size();
     int colCount = grid.getAllNodes()[0].size();
 
@@ -358,25 +348,22 @@ bool MazeGenerator::generateRemainMaze(Grid& grid)
 
 bool MazeGenerator::finalizeMaze(Grid& grid)
 {
-    static int row = 0;
-    static int col = 0;
-
     auto& nodes = grid.getAllNodes();
 
     int rowCount = nodes.size();
     int colCount = nodes[0].size();
 
-    if (row >= rowCount)
+    if (finalizeRow >= rowCount)
     {
-        row = 0;
-        col = 0;
+        finalizeRow = 0;
+        finalizeCol = 0;
 
         MazeStorage::saveMaze(grid);
 
         return true;
     }
 
-    Node& node = nodes[row][col];
+    Node& node = nodes[finalizeRow][finalizeCol];
 
     if (node.state == NodeState::DeadEnd ||
         node.state == NodeState::Empty) 
@@ -390,12 +377,12 @@ bool MazeGenerator::finalizeMaze(Grid& grid)
         node.state = NodeState::Path;
     }
 
-    col++;
+    finalizeCol++;
 
-    if (col >= colCount)
+    if (finalizeCol >= colCount)
     {
-        col = 0;
-        row++;
+        finalizeCol = 0;
+        finalizeRow++;
     }
 
     return false;
@@ -403,11 +390,22 @@ bool MazeGenerator::finalizeMaze(Grid& grid)
 
 void MazeGenerator::startFromTheScratch(Grid& grid)
 {
-    getPathStack().clear();
+    pathStack.clear();
     current = nullptr;
     started = false;
     routeNeighbourCount = 0;
     remainSeedIndex = 0;
+
+    remainStarted = false;
+    exploringBranch = false;
+    routeNodes.clear();
+    expandableNodes.clear();
+    branchStack.clear();
+    stepsLeftInBranch = 0;
+    lastSeed = nullptr;
+
+    finalizeRow = 0;
+    finalizeCol = 0;
 
     grid.resize(grid.getWidth(), grid.getHeight());
 

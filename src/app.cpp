@@ -174,7 +174,10 @@ void App::update(float deltaSeconds)
     if (!selectMaze)
     {
         generationStepAccumulator += generationStepsPerSecond * deltaSeconds;
-        const int steps = static_cast<int>(std::floor(generationStepAccumulator));
+        generationStepAccumulator = std::min(generationStepAccumulator, static_cast<float>(maxGenerationStepsPerUpdate));
+        const int steps = std::min(
+            static_cast<int>(std::floor(generationStepAccumulator)),
+            maxGenerationStepsPerUpdate);
 
         if (steps < 1)
             return;
@@ -238,10 +241,13 @@ void App::render()
     if (leftPanelWidth < 150.f)
         leftPanelWidth = 150.f;
 
-    ImGui::SetNextWindowPos(ImVec2(leftPanelX, static_cast<float>(marginY) * 0.2f), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(leftPanelWidth, 70.f), ImGuiCond_Always);
+    const float controlsPanelY = static_cast<float>(marginY) * 0.2f;
+    const float controlsPanelHeight = std::max(120.f, static_cast<float>(window.getSize().y) - controlsPanelY - padding);
 
-    ImGui::Begin("Top Controls", nullptr,
+    ImGui::SetNextWindowPos(ImVec2(leftPanelX, controlsPanelY), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(leftPanelWidth, controlsPanelHeight), ImGuiCond_Always);
+
+    ImGui::Begin("Controls", nullptr,
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoMove);
@@ -266,25 +272,7 @@ void App::render()
         }
     }
 
-    ImGui::End();
-
-    float bottomPanelHeight = 70.f;
-    float bottomPanelY = static_cast<float>(window.getSize().y) - bottomPanelHeight - 10.f;
-
-    const float topPanelY = static_cast<float>(marginY) * 0.2f;
-    const float topPanelHeight = 70.f;
-
-    const float middlePanelY = topPanelY + topPanelHeight + 8.f;
-    const float availableMiddleHeight = bottomPanelY - middlePanelY - 8.f;
-    const float middlePanelHeight = availableMiddleHeight;
-
-    ImGui::SetNextWindowPos(ImVec2(leftPanelX, middlePanelY), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(leftPanelWidth, middlePanelHeight), ImGuiCond_Always);
-
-    ImGui::Begin("Maze Selection", nullptr,
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoMove);
+    ImGui::Separator();
 
     ImGui::TextUnformatted("Create maze size");
 
@@ -294,19 +282,16 @@ void App::render()
     ImGui::InputInt("Height", &newMazeHeight, 2, 2);
     ImGui::PopItemWidth();
 
-    if (newMazeWidth < minMazeDimension)
-        newMazeWidth = minMazeDimension;
-
-    if (newMazeHeight < minMazeDimension)
-        newMazeHeight = minMazeDimension;
+    newMazeWidth = std::clamp(newMazeWidth, minMazeDimension, maxMazeDimension);
+    newMazeHeight = std::clamp(newMazeHeight, minMazeDimension, maxMazeDimension);
 
     if (newMazeWidth % 2 == 0)
-        newMazeWidth += 1;
+        newMazeWidth += (newMazeWidth >= maxMazeDimension ? -1 : 1);
 
     if (newMazeHeight % 2 == 0)
-        newMazeHeight += 1;
+        newMazeHeight += (newMazeHeight >= maxMazeDimension ? -1 : 1);
 
-    ImGui::TextWrapped("Size must be odd and at least 15x15.");
+    ImGui::TextWrapped("Size must be odd, at least 11x11 and at most 101x101.");
 
     if (ImGui::Button("Create new maze", ImVec2(leftPanelWidth - 28.f, 26.f)))
     {
@@ -384,15 +369,7 @@ void App::render()
     if (generationStepsPerSecond > 600.f)
         generationStepsPerSecond = 600.f;
 
-    ImGui::End();
-
-    ImGui::SetNextWindowPos(ImVec2(leftPanelX, bottomPanelY), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(leftPanelWidth, bottomPanelHeight), ImGuiCond_Always);
-
-    ImGui::Begin("Bottom Controls", nullptr,
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoMove);
+    ImGui::Separator();
 
     float buttonWidth = (leftPanelWidth - 35.f) / 3.f;
 

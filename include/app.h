@@ -33,7 +33,9 @@ private:
 
     static constexpr int defaultGridWidth = 21;
     static constexpr int defaultGridHeight = 31;
-    static constexpr int minMazeDimension = 15;
+    static constexpr int minMazeDimension = 11;
+    static constexpr int maxMazeDimension = 101;
+    static constexpr int maxGenerationStepsPerUpdate = 250;
 
     int cellSize = 15;
 

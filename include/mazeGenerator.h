@@ -23,7 +23,7 @@ public:
         std::vector<Node*>& neighbors,
         bool allowIfCurrentRowIsOne = false);
 
-    std::vector<Node*> getPathStack() const { return pathStack; }
+    const std::vector<Node*>& getPathStack() const { return pathStack; }
 
     void startFromTheScratch(Grid& grid);
 
