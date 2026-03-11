@@ -76,8 +76,10 @@ void App::resetApp(bool loadSelectedMaze)
     possibleToContinue = false;
     generationStepAccumulator = 0.f;
     bfs.reset(grid);
-    bfsRunning = false;
-    bfsElapsedSeconds = 0.f;
+    dfs.reset(grid);
+    algorithmRunning = false;
+    algorithmElapsedSeconds = 0.f;
+    activeAlgorithmIndex = -1;
     algorithmStatus = "Algorithm idle.";
 
     mazeRouteGenerated = false;
@@ -227,32 +229,66 @@ void App::update(float deltaSeconds)
         }
     }
 
-    if (bfsRunning)
+    if (algorithmRunning)
     {
-        bfsElapsedSeconds += deltaSeconds;
+        algorithmElapsedSeconds += deltaSeconds;
 
-        Bfs::StepResult result = bfs.step(grid, bfsStepsPerUpdate);
-
-        if (result == Bfs::StepResult::Found)
+        if (activeAlgorithmIndex == 0)
         {
-            bfsRunning = false;
+            Bfs::StepResult result = bfs.step(grid, algorithmStepsPerUpdate);
 
-            char buffer[128];
-            std::snprintf(buffer, sizeof(buffer), "BFS finished: path found in %.3f s.", bfsElapsedSeconds);
-            algorithmStatus = buffer;
+            if (result == Bfs::StepResult::Found)
+            {
+                algorithmRunning = false;
+
+                char buffer[128];
+                std::snprintf(buffer, sizeof(buffer), "BFS finished: path found in %.3f s.", algorithmElapsedSeconds);
+                algorithmStatus = buffer;
+            }
+            else if (result == Bfs::StepResult::NoPath)
+            {
+                algorithmRunning = false;
+
+                char buffer[128];
+                std::snprintf(buffer, sizeof(buffer), "BFS finished: no path in %.3f s.", algorithmElapsedSeconds);
+                algorithmStatus = buffer;
+            }
+            else if (result == Bfs::StepResult::InvalidMaze)
+            {
+                algorithmRunning = false;
+                algorithmStatus = "BFS could not continue (invalid maze state).";
+            }
         }
-        else if (result == Bfs::StepResult::NoPath)
+        else if (activeAlgorithmIndex == 1)
         {
-            bfsRunning = false;
+            Dfs::StepResult result = dfs.step(grid, algorithmStepsPerUpdate);
 
-            char buffer[128];
-            std::snprintf(buffer, sizeof(buffer), "BFS finished: no path in %.3f s.", bfsElapsedSeconds);
-            algorithmStatus = buffer;
+            if (result == Dfs::StepResult::Found)
+            {
+                algorithmRunning = false;
+
+                char buffer[128];
+                std::snprintf(buffer, sizeof(buffer), "DFS finished: path found in %.3f s.", algorithmElapsedSeconds);
+                algorithmStatus = buffer;
+            }
+            else if (result == Dfs::StepResult::NoPath)
+            {
+                algorithmRunning = false;
+
+                char buffer[128];
+                std::snprintf(buffer, sizeof(buffer), "DFS finished: no path in %.3f s.", algorithmElapsedSeconds);
+                algorithmStatus = buffer;
+            }
+            else if (result == Dfs::StepResult::InvalidMaze)
+            {
+                algorithmRunning = false;
+                algorithmStatus = "DFS could not continue (invalid maze state).";
+            }
         }
-        else if (result == Bfs::StepResult::InvalidMaze)
+        else
         {
-            bfsRunning = false;
-            algorithmStatus = "BFS could not continue (invalid maze state).";
+            algorithmRunning = false;
+            algorithmStatus = "Algorithm selection became invalid.";
         }
     }
 }
@@ -447,7 +483,7 @@ void App::render()
 
     ImGui::TextUnformatted("Algorithm selection");
 
-    const char* algorithms[] = { "BFS" };
+    const char* algorithms[] = { "BFS", "DFS" };
     ImGui::Combo("##AlgorithmCombo", &selectedAlgorithmIndex, algorithms, IM_ARRAYSIZE(algorithms));
 
     if (ImGui::Button("Run selected algorithm", ImVec2(rightPanelWidth - 20.f, 30.f)))
@@ -459,39 +495,59 @@ void App::render()
         else
         {
             bfs.reset(grid);
-            bfsElapsedSeconds = 0.f;
+            dfs.reset(grid);
+            algorithmElapsedSeconds = 0.f;
+            activeAlgorithmIndex = selectedAlgorithmIndex;
 
-            if (bfs.start(grid))
+            if (selectedAlgorithmIndex == 0)
             {
-                bfsRunning = true;
-                algorithmStatus = "BFS running...";
+                if (bfs.start(grid))
+                {
+                    algorithmRunning = true;
+                    algorithmStatus = "BFS running...";
+                }
+                else
+                {
+                    algorithmRunning = false;
+                    activeAlgorithmIndex = -1;
+                    algorithmStatus = "BFS could not start (missing Start/Goal).";
+                }
             }
             else
             {
-                bfsRunning = false;
-                algorithmStatus = "BFS could not start (missing Start/Goal).";
+                if (dfs.start(grid))
+                {
+                    algorithmRunning = true;
+                    algorithmStatus = "DFS running...";
+                }
+                else
+                {
+                    algorithmRunning = false;
+                    activeAlgorithmIndex = -1;
+                    algorithmStatus = "DFS could not start (missing Start/Goal).";
+                }
             }
         }
     }
 
     ImGui::PushItemWidth(rightPanelWidth - 28.f);
-    ImGui::SliderInt("BFS steps/update", &bfsStepsPerUpdate, 1, 200, "%d");
-    ImGui::InputInt("##BfsStepsInput", &bfsStepsPerUpdate, 1, 10);
+    ImGui::SliderInt("Algorithm steps/update", &algorithmStepsPerUpdate, 1, 200, "%d");
+    ImGui::InputInt("##AlgorithmStepsInput", &algorithmStepsPerUpdate, 1, 10);
     ImGui::PopItemWidth();
 
-    if (bfsStepsPerUpdate < 1)
-        bfsStepsPerUpdate = 1;
+    if (algorithmStepsPerUpdate < 1)
+        algorithmStepsPerUpdate = 1;
 
-    if (bfsStepsPerUpdate > 200)
-        bfsStepsPerUpdate = 200;
+    if (algorithmStepsPerUpdate > 200)
+        algorithmStepsPerUpdate = 200;
 
     ImGui::Separator();
     ImGui::TextWrapped("%s", algorithmStatus.c_str());
 
     ImGui::Separator();
 
-    ImGui::TextUnformatted("BFS elapsed time");
-    ImGui::Text("%.3f s", bfsElapsedSeconds);
+    ImGui::TextUnformatted("Algorithm elapsed time");
+    ImGui::Text("%.3f s", algorithmElapsedSeconds);
 
     ImGui::End();
 

@@ -4,6 +4,7 @@
 #include "grid.h"
 #include "mazeGenerator.h"
 #include "algorithms/bfs.h"
+#include "algorithms/dfs.h"
 
 #include <SFML/Graphics.hpp>
 #include <vector>
@@ -32,6 +33,7 @@ private:
     Visualizer visualizer;
     MazeGenerator generator;
     Bfs bfs;
+    Dfs dfs;
 
     static constexpr int defaultGridWidth = 21;
     static constexpr int defaultGridHeight = 31;
@@ -45,11 +47,12 @@ private:
     bool possibleToStart = true;
     float generationStepsPerSecond = 60.f;
     float generationStepAccumulator = 0.f;
-    int bfsStepsPerUpdate = 1;
+    int algorithmStepsPerUpdate = 1;
     int selectedAlgorithmIndex = 0;
+    int activeAlgorithmIndex = -1;
     std::string algorithmStatus = "Algorithm idle.";
-    bool bfsRunning = false;
-    float bfsElapsedSeconds = 0.f;
+    bool algorithmRunning = false;
+    float algorithmElapsedSeconds = 0.f;
 
     int selectedMazeId = -1;
     int selectedMazeIndex = -1;
