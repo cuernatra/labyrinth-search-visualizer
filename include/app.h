@@ -40,11 +40,13 @@ private:
     static constexpr int minMazeDimension = 11;
     static constexpr int maxMazeDimension = 101;
     static constexpr int maxGenerationStepsPerUpdate = 250;
+    static constexpr int maxLoopCarveCount = 50;
 
     int cellSize = 15;
 
     bool possibleToContinue = false;
     bool possibleToStart = true;
+    int loopCarveCount = 0;
     float generationStepsPerSecond = 60.f;
     float generationStepAccumulator = 0.f;
     int algorithmStepsPerUpdate = 1;
@@ -75,6 +77,11 @@ private:
     bool MazeReady = false;
 
     bool paused = true;
+
+    unsigned int minWindowWidth = 0;
+    unsigned int minWindowHeight = 0;
+    bool adjustingWindowSize = false;
+    int maxMazeCellSize = 1;
 
     sf::RenderWindow window;
 };

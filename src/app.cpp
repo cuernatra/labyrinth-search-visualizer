@@ -119,22 +119,33 @@ void App::resetApp(bool loadSelectedMaze)
 
 void App::updateLayout()
 {
-    int sizeFromWidth  = (maxGridPixels - marginX * 2) / grid.getWidth();
-    int sizeFromHeight = (maxGridPixels - marginY * 2) / grid.getHeight();
+    const int sizeFromWidth  = (maxGridPixels - marginX * 2) / grid.getWidth();
+    const int sizeFromHeight = (maxGridPixels - marginY * 2) / grid.getHeight();
 
     cellSize = std::min(sizeFromWidth, sizeFromHeight);
 
     if (cellSize < 1)
         cellSize = 1;
 
-    int windowWidth  = grid.getWidth()  * cellSize + marginX * 2;
-    int windowHeight = grid.getHeight() * cellSize + marginY * 2;
+    maxMazeCellSize = cellSize;
+
+    const int windowWidth  = grid.getWidth()  * cellSize + marginX * 2;
+    const int windowHeight = grid.getHeight() * cellSize + marginY * 2;
+
+    minWindowWidth = static_cast<unsigned int>(windowWidth);
+    minWindowHeight = static_cast<unsigned int>(windowHeight);
 
     window.create(
         sf::VideoMode(windowWidth, windowHeight),
         "Labyrinth Search Visualizer",
-        sf::Style::Titlebar | sf::Style::Close
+        sf::Style::Titlebar | sf::Style::Resize | sf::Style::Close
     );
+
+    window.setView(sf::View(sf::FloatRect(
+        0.f,
+        0.f,
+        static_cast<float>(windowWidth),
+        static_cast<float>(windowHeight))));
 
     window.setPosition(sf::Vector2i(500, 25));
 }
@@ -147,6 +158,14 @@ void App::run()
     {
         const float deltaSeconds = deltaClock.restart().asSeconds();
         processEvents();
+
+        const sf::Vector2u currentSize = window.getSize();
+        window.setView(sf::View(sf::FloatRect(
+            0.f,
+            0.f,
+            static_cast<float>(currentSize.x),
+            static_cast<float>(currentSize.y))));
+
         ImGui::SFML::Update(window, sf::seconds(deltaSeconds));
         update(deltaSeconds);
         render();
@@ -164,6 +183,39 @@ void App::processEvents()
 
         if (event.type == sf::Event::Closed)
             window.close();
+
+        if (event.type == sf::Event::Resized && !adjustingWindowSize)
+        {
+            unsigned int adjustedWidth = event.size.width;
+            unsigned int adjustedHeight = event.size.height;
+
+            bool sizeChanged = false;
+
+            if (adjustedWidth < minWindowWidth)
+            {
+                adjustedWidth = minWindowWidth;
+                sizeChanged = true;
+            }
+
+            if (adjustedHeight < minWindowHeight)
+            {
+                adjustedHeight = minWindowHeight;
+                sizeChanged = true;
+            }
+
+            if (sizeChanged)
+            {
+                adjustingWindowSize = true;
+                window.setSize(sf::Vector2u(adjustedWidth, adjustedHeight));
+                adjustingWindowSize = false;
+            }
+
+            window.setView(sf::View(sf::FloatRect(
+                0.f,
+                0.f,
+                static_cast<float>(adjustedWidth),
+                static_cast<float>(adjustedHeight))));
+        }
 
         if (event.type == sf::Event::KeyPressed)
         {
@@ -295,21 +347,44 @@ void App::update(float deltaSeconds)
 
 void App::render()
 {
-    window.clear(sf::Color(90, 90, 90));
-
-    visualizer.draw(window, grid, cellSize, marginX, marginY);
+    const int windowWidth = static_cast<int>(window.getSize().x);
+    const int windowHeight = static_cast<int>(window.getSize().y);
 
     const float padding = 10.f;
+    const float basePanelWidth = std::max(150.f, static_cast<float>(marginX) - 2.f * padding);
+    const float sidePanelWidth = basePanelWidth;
 
+    const int centerAreaWidth = std::max(
+        120,
+        windowWidth - static_cast<int>(2.f * sidePanelWidth + 4.f * padding));
+    const int centerAreaHeight = std::max(120, windowHeight - marginY * 2);
 
-    float leftPanelX = padding;
-    float leftPanelWidth = static_cast<float>(marginX) - 2.f * padding;
+    const int dynamicCellFromWidth = centerAreaWidth / grid.getWidth();
+    const int dynamicCellFromHeight = centerAreaHeight / grid.getHeight();
 
-    if (leftPanelWidth < 150.f)
-        leftPanelWidth = 150.f;
+    const int uncappedCellSize = std::max(1, std::min(dynamicCellFromWidth, dynamicCellFromHeight));
+    cellSize = uncappedCellSize;
+
+    const int mazePixelWidth = grid.getWidth() * cellSize;
+    const int mazePixelHeight = grid.getHeight() * cellSize;
+
+    const int centerAreaStartX = static_cast<int>(sidePanelWidth + 2.f * padding);
+    const int dynamicMarginX = centerAreaStartX + std::max(0, (centerAreaWidth - mazePixelWidth) / 2);
+    const int dynamicMarginY = std::max(marginY, (windowHeight - mazePixelHeight) / 2);
+
+    window.clear(sf::Color(90, 90, 90));
+
+    visualizer.draw(window, grid, cellSize, dynamicMarginX, dynamicMarginY);
+
 
     const float controlsPanelY = static_cast<float>(marginY) * 0.2f;
     const float controlsPanelHeight = std::max(120.f, static_cast<float>(window.getSize().y) - controlsPanelY - padding);
+
+    float leftPanelX = padding;
+    float leftPanelWidth = sidePanelWidth;
+
+    if (leftPanelWidth < 150.f)
+        leftPanelWidth = 150.f;
 
     ImGui::SetNextWindowPos(ImVec2(leftPanelX, controlsPanelY), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(leftPanelWidth, controlsPanelHeight), ImGuiCond_Always);
@@ -323,6 +398,7 @@ void App::render()
     {
         if (possibleToStart) 
         {
+            generator.setLoopCarveCount(loopCarveCount);
             selectMaze = false;
             paused = false;
     
@@ -339,9 +415,11 @@ void App::render()
         }
     }
 
+    ImGui::TextUnformatted("\n");
     ImGui::Separator();
+    ImGui::TextUnformatted("\n");
 
-    ImGui::TextUnformatted("Create maze size");
+    ImGui::TextUnformatted("New maze size\n");
 
     const float inputWidth = leftPanelWidth - 90.f;
     ImGui::PushItemWidth(inputWidth > 70.f ? inputWidth : 70.f);
@@ -359,9 +437,19 @@ void App::render()
         newMazeHeight += (newMazeHeight >= maxMazeDimension ? -1 : 1);
 
     ImGui::TextWrapped("Size must be odd, at least 11x11 and at most 101x101.");
+    ImGui::TextUnformatted("\nRandom loops");
+    ImGui::PushItemWidth(leftPanelWidth - 28.f);
+    ImGui::SliderInt("##LoopCarveCount", &loopCarveCount, 0, maxLoopCarveCount, "%d walls");
+    ImGui::InputInt("##LoopCarveCountInput", &loopCarveCount, 1, 10);
+    ImGui::PopItemWidth();
+
+    loopCarveCount = std::clamp(loopCarveCount, 0, maxLoopCarveCount);
+    generator.setLoopCarveCount(loopCarveCount);
+    ImGui::TextWrapped("Affects all new generations.");
 
     if (ImGui::Button("Create new maze", ImVec2(leftPanelWidth - 28.f, 26.f)))
     {
+        generator.setLoopCarveCount(loopCarveCount);
         grid.resize(newMazeWidth, newMazeHeight);
         updateLayout();
         resetApp(false);
@@ -371,7 +459,9 @@ void App::render()
         generationStepAccumulator = 0.f;
     }
 
+    ImGui::TextUnformatted("\n");
     ImGui::Separator();
+    ImGui::TextUnformatted("\n");
     ImGui::TextUnformatted("Saved mazes");
 
     std::string statusText = "Status: None";
@@ -423,7 +513,9 @@ void App::render()
     }
 
     ImGui::TextUnformatted(statusText.c_str());
+    ImGui::TextUnformatted("\n");
     ImGui::Separator();
+    ImGui::TextUnformatted("\n");
     ImGui::TextUnformatted("Generation speed");
     ImGui::SliderFloat("##GenerationSpeed", &generationStepsPerSecond, 1.f, 600.f, "%.1f steps/s");
     ImGui::PushItemWidth(leftPanelWidth - 28.f);
@@ -468,7 +560,7 @@ void App::render()
 
     ImGui::End();
 
-    float rightPanelWidth = leftPanelWidth;
+    float rightPanelWidth = sidePanelWidth;
     float rightPanelX = static_cast<float>(window.getSize().x) - rightPanelWidth - padding;
 
     const float rightMainPanelHeight = std::max(120.f, static_cast<float>(window.getSize().y) - controlsPanelY - padding);
@@ -530,8 +622,9 @@ void App::render()
         }
     }
 
+    ImGui::TextUnformatted("Algorithm steps/update");
     ImGui::PushItemWidth(rightPanelWidth - 28.f);
-    ImGui::SliderInt("Algorithm steps/update", &algorithmStepsPerUpdate, 1, 200, "%d");
+    ImGui::SliderInt("##AlgorithmStepsSlider", &algorithmStepsPerUpdate, 1, 200, "%d");
     ImGui::InputInt("##AlgorithmStepsInput", &algorithmStepsPerUpdate, 1, 10);
     ImGui::PopItemWidth();
 
@@ -550,6 +643,12 @@ void App::render()
     ImGui::Text("%.3f s", algorithmElapsedSeconds);
 
     ImGui::End();
+
+    window.setView(sf::View(sf::FloatRect(
+        0.f,
+        0.f,
+        static_cast<float>(window.getSize().x),
+        static_cast<float>(window.getSize().y))));
 
     ImGui::SFML::Render(window);
     window.display();
