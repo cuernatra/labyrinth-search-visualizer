@@ -39,8 +39,9 @@ private:
 
     bool possibleToContinue = false;
     bool possibleToStart = true;
+    int generationStepsPerFrame = 1;
 
-    int selectedMazeId = 20;
+    int selectedMazeId = -1;
     int selectedMazeIndex = -1;
     int newMazeWidth = defaultGridWidth;
     int newMazeHeight = defaultGridHeight;

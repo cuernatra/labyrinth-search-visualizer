@@ -170,32 +170,46 @@ void App::update()
 
     if (!selectMaze)
     {
-        if (!mazeRouteGenerated)
-        {
-            mazeRouteGenerated = generator.generateMazeRoute(grid);
-        }
-        else if (!remainMazeGenerated)
-        {
-            remainMazeGenerated = generator.generateRemainMaze(grid);
-        }
-        else if (!MazeReady)
-        {
-            MazeReady = generator.finalizeMaze(grid);
+        const int steps = std::max(1, generationStepsPerFrame);
 
-            if (MazeReady)
+        for (int i = 0; i < steps; ++i)
+        {
+            if (!mazeRouteGenerated)
             {
-                refreshMazeIds();
-
-                if (!mazeIds.empty())
-                    generatedMazeId = mazeIds.back();
-                else
-                    generatedMazeId = -1;
-
-                selectedMazeIndex = -1;
-                selectedMazeId = -1;
-                generatingNewMaze = false;
-                loadedMazeId = -1;
+                mazeRouteGenerated = generator.generateMazeRoute(grid);
+                continue;
             }
+
+            if (!remainMazeGenerated)
+            {
+                remainMazeGenerated = generator.generateRemainMaze(grid);
+                continue;
+            }
+
+            if (!MazeReady)
+            {
+                MazeReady = generator.finalizeMaze(grid);
+
+                if (MazeReady)
+                {
+                    refreshMazeIds();
+
+                    if (!mazeIds.empty())
+                        generatedMazeId = mazeIds.back();
+                    else
+                        generatedMazeId = -1;
+
+                    selectedMazeIndex = -1;
+                    selectedMazeId = -1;
+                    generatingNewMaze = false;
+                    loadedMazeId = -1;
+                    break;
+                }
+
+                continue;
+            }
+
+            break;
         }
     }
 }
@@ -297,6 +311,15 @@ void App::render()
     ImGui::Separator();
     ImGui::TextUnformatted("Saved mazes");
 
+    std::string statusText = "Status: None";
+
+    if (generatingNewMaze)
+        statusText = "Status: Generating";
+    else if (loadedMazeId >= 0)
+        statusText = "Status: Loaded #" + std::to_string(loadedMazeId);
+    else if (generatedMazeId >= 0)
+        statusText = "Status: Generated #" + std::to_string(generatedMazeId);
+
     if (mazeIds.empty())
     {
         ImGui::TextWrapped("No saved mazes found.");
@@ -334,18 +357,21 @@ void App::render()
                 resetApp(true);
             }
         }
-
-        std::string statusText = "Status: None";
-
-        if (generatingNewMaze)
-            statusText = "Status: Generating";
-        else if (loadedMazeId >= 0)
-            statusText = "Status: Loaded #" + std::to_string(loadedMazeId);
-        else if (generatedMazeId >= 0)
-            statusText = "Status: Generated #" + std::to_string(generatedMazeId);
-
-        ImGui::TextUnformatted(statusText.c_str());
     }
+
+    ImGui::TextUnformatted(statusText.c_str());
+    ImGui::Separator();
+    ImGui::TextUnformatted("Generation speed");
+    ImGui::SliderInt("##GenerationSpeed", &generationStepsPerFrame, 1, 400, "%d steps/frame");
+    ImGui::PushItemWidth(leftPanelWidth - 28.f);
+    ImGui::InputInt("##GenerationSpeedInput", &generationStepsPerFrame, 1, 10);
+    ImGui::PopItemWidth();
+
+    if (generationStepsPerFrame < 1)
+        generationStepsPerFrame = 1;
+
+    if (generationStepsPerFrame > 400)
+        generationStepsPerFrame = 400;
 
     ImGui::End();
 
