@@ -135,19 +135,53 @@ void App::updateLayout()
     minWindowWidth = static_cast<unsigned int>(windowWidth);
     minWindowHeight = static_cast<unsigned int>(windowHeight);
 
+    unsigned int desiredWindowWidth = minWindowWidth;
+    unsigned int desiredWindowHeight = minWindowHeight;
+    sf::Vector2i desiredWindowPosition(500, 25);
+
+    if (window.isOpen())
+    {
+        const sf::Vector2u currentSize = window.getSize();
+        desiredWindowWidth = std::max(desiredWindowWidth, currentSize.x);
+        desiredWindowHeight = std::max(desiredWindowHeight, currentSize.y);
+        desiredWindowPosition = window.getPosition();
+    }
+
+    const sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
+    const bool useFullscreen =
+        desiredWindowWidth > desktopMode.width ||
+        desiredWindowHeight > desktopMode.height;
+
+    if (useFullscreen)
+    {
+        desiredWindowWidth = desktopMode.width;
+        desiredWindowHeight = desktopMode.height;
+    }
+
     window.create(
-        sf::VideoMode(windowWidth, windowHeight),
+        sf::VideoMode(desiredWindowWidth, desiredWindowHeight),
         "Labyrinth Search Visualizer",
-        sf::Style::Titlebar | sf::Style::Resize | sf::Style::Close
+        useFullscreen
+            ? sf::Style::Fullscreen
+            : (sf::Style::Titlebar | sf::Style::Resize | sf::Style::Close)
     );
 
     window.setView(sf::View(sf::FloatRect(
         0.f,
         0.f,
-        static_cast<float>(windowWidth),
-        static_cast<float>(windowHeight))));
+        static_cast<float>(desiredWindowWidth),
+        static_cast<float>(desiredWindowHeight))));
 
-    window.setPosition(sf::Vector2i(500, 25));
+    if (!useFullscreen)
+    {
+        const int maxX = std::max(0, static_cast<int>(desktopMode.width) - static_cast<int>(desiredWindowWidth));
+        const int maxY = std::max(0, static_cast<int>(desktopMode.height) - static_cast<int>(desiredWindowHeight));
+
+        desiredWindowPosition.x = std::clamp(desiredWindowPosition.x, 0, maxX);
+        desiredWindowPosition.y = std::clamp(desiredWindowPosition.y, 0, maxY);
+
+        window.setPosition(desiredWindowPosition);
+    }
 }
 
 void App::run()
