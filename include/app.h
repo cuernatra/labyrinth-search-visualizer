@@ -24,7 +24,7 @@ public:
 
 private:
     void processEvents();
-    void update();
+    void update(float deltaSeconds);
     void render();
 
     Grid grid;
@@ -39,7 +39,8 @@ private:
 
     bool possibleToContinue = false;
     bool possibleToStart = true;
-    int generationStepsPerFrame = 1;
+    float generationStepsPerSecond = 60.f;
+    float generationStepAccumulator = 0.f;
 
     int selectedMazeId = -1;
     int selectedMazeIndex = -1;

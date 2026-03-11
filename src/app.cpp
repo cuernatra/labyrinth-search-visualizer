@@ -2,6 +2,7 @@
 #include "mazeStorage.h"
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -72,6 +73,7 @@ void App::resetApp(bool loadSelectedMaze)
 {
     paused = true;
     possibleToContinue = false;
+    generationStepAccumulator = 0.f;
 
     mazeRouteGenerated = false;
     remainMazeGenerated = false;
@@ -136,9 +138,10 @@ void App::run()
 
     while (window.isOpen())
     {
+        const float deltaSeconds = deltaClock.restart().asSeconds();
         processEvents();
-        ImGui::SFML::Update(window, deltaClock.restart());
-        update();
+        ImGui::SFML::Update(window, sf::seconds(deltaSeconds));
+        update(deltaSeconds);
         render();
     }
 
@@ -163,14 +166,20 @@ void App::processEvents()
     }
 }
 
-void App::update()
+void App::update(float deltaSeconds)
 {
     if (paused)
         return;
 
     if (!selectMaze)
     {
-        const int steps = std::max(1, generationStepsPerFrame);
+        generationStepAccumulator += generationStepsPerSecond * deltaSeconds;
+        const int steps = static_cast<int>(std::floor(generationStepAccumulator));
+
+        if (steps < 1)
+            return;
+
+        generationStepAccumulator -= static_cast<float>(steps);
 
         for (int i = 0; i < steps; ++i)
         {
@@ -247,6 +256,7 @@ void App::render()
             mazeRouteGenerated = false;
             remainMazeGenerated = false;
             MazeReady = false;
+            generationStepAccumulator = 0.f;
             possibleToStart = false;
             generatingNewMaze = true;
             loadedMazeId = -1;
@@ -306,6 +316,7 @@ void App::render()
         paused = false;
         possibleToStart = false;
         generatingNewMaze = true;
+        generationStepAccumulator = 0.f;
     }
 
     ImGui::Separator();
@@ -362,16 +373,16 @@ void App::render()
     ImGui::TextUnformatted(statusText.c_str());
     ImGui::Separator();
     ImGui::TextUnformatted("Generation speed");
-    ImGui::SliderInt("##GenerationSpeed", &generationStepsPerFrame, 1, 400, "%d steps/frame");
+    ImGui::SliderFloat("##GenerationSpeed", &generationStepsPerSecond, 1.f, 600.f, "%.1f steps/s");
     ImGui::PushItemWidth(leftPanelWidth - 28.f);
-    ImGui::InputInt("##GenerationSpeedInput", &generationStepsPerFrame, 1, 10);
+    ImGui::InputFloat("##GenerationSpeedInput", &generationStepsPerSecond, 0.5f, 5.f, "%.1f");
     ImGui::PopItemWidth();
 
-    if (generationStepsPerFrame < 1)
-        generationStepsPerFrame = 1;
+    if (generationStepsPerSecond < 1.f)
+        generationStepsPerSecond = 1.f;
 
-    if (generationStepsPerFrame > 400)
-        generationStepsPerFrame = 400;
+    if (generationStepsPerSecond > 600.f)
+        generationStepsPerSecond = 600.f;
 
     ImGui::End();
 
