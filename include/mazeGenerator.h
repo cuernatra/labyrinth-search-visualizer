@@ -11,6 +11,8 @@ public:
     bool generateMazeRoute(Grid& grid);
     bool generateRemainMaze(Grid& grid);
     bool finalizeMaze(Grid& grid);
+    void setLoopCarveCount(int count);
+    int getLoopCarveCount() const { return loopCarveCount; }
 
     static int countPathNeighbors(Grid& grid, int row, int col);
 
@@ -28,6 +30,8 @@ public:
     void startFromTheScratch(Grid& grid);
 
 private:
+    void applyRandomLoops(Grid& grid);
+
     std::vector<Node*> pathStack;
     Node* current = nullptr;
     bool started = false;
@@ -44,4 +48,6 @@ private:
 
     int finalizeRow = 0;
     int finalizeCol = 0;
+
+    int loopCarveCount = 0;
 };

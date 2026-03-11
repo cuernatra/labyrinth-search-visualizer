@@ -3,6 +3,69 @@
 #include <random>
 #include <algorithm>
 
+void MazeGenerator::setLoopCarveCount(int count)
+{
+    loopCarveCount = std::max(0, count);
+}
+
+void MazeGenerator::applyRandomLoops(Grid& grid)
+{
+    if (loopCarveCount <= 0)
+        return;
+
+    auto& nodes = grid.getAllNodes();
+    const int rowCount = static_cast<int>(nodes.size());
+    const int colCount = static_cast<int>(nodes[0].size());
+
+    if (rowCount < 3 || colCount < 3)
+        return;
+
+    auto isOpen = [](NodeState state)
+    {
+        return state != NodeState::Wall;
+    };
+
+    auto countOpenNeighbors = [&](int row, int col)
+    {
+        int openCount = 0;
+
+        if (isOpen(nodes[row - 1][col].state)) openCount++;
+        if (isOpen(nodes[row + 1][col].state)) openCount++;
+        if (isOpen(nodes[row][col - 1].state)) openCount++;
+        if (isOpen(nodes[row][col + 1].state)) openCount++;
+
+        return openCount;
+    };
+
+    std::vector<Node*> candidates;
+    candidates.reserve((rowCount - 2) * (colCount - 2));
+
+    for (int row = 1; row < rowCount - 1; ++row)
+    {
+        for (int col = 1; col < colCount - 1; ++col)
+        {
+            Node& node = nodes[row][col];
+
+            if (node.state != NodeState::Wall)
+                continue;
+
+            if (countOpenNeighbors(row, col) >= 2)
+                candidates.push_back(&node);
+        }
+    }
+
+    if (candidates.empty())
+        return;
+
+    static std::mt19937 rng(std::random_device{}());
+    std::shuffle(candidates.begin(), candidates.end(), rng);
+
+    const int wallsToCarve = std::min(loopCarveCount, static_cast<int>(candidates.size()));
+
+    for (int i = 0; i < wallsToCarve; ++i)
+        candidates[i]->state = NodeState::Path;
+}
+
 void MazeGenerator::generateMazeBase(Grid& grid) 
 {
     auto& nodes = grid.getAllNodes();
@@ -357,6 +420,8 @@ bool MazeGenerator::finalizeMaze(Grid& grid)
     {
         finalizeRow = 0;
         finalizeCol = 0;
+
+        applyRandomLoops(grid);
 
         MazeStorage::saveMaze(grid);
 
