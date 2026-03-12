@@ -348,6 +348,7 @@ void App::update(float deltaSeconds)
                 {
                     refreshNodeWeights(true);
                     refreshMazeIds();
+                    possibleToStart = true;
 
                     if (!mazeIds.empty())
                         generatedMazeId = mazeIds.back();
@@ -534,6 +535,8 @@ void App::render()
         if (possibleToStart) 
         {
             generator.setLoopCarveCount(loopCarveCount);
+            generator.startFromTheScratch(grid);
+            refreshNodeWeights(true);
             selectMaze = false;
             paused = false;
     
