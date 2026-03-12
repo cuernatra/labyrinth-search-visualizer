@@ -1,15 +1,16 @@
-#include "algorithms/dfs.h"
+#include "algorithms/dijkstra.h"
 
 #include <algorithm>
+#include <limits>
 
-bool Dfs::isWalkable(NodeState state) const
+bool Dijkstra::isWalkable(NodeState state) const
 {
     return state != NodeState::Wall;
 }
 
-void Dfs::reset(Grid& grid)
+void Dijkstra::reset(Grid& grid)
 {
-    frontier.clear();
+    frontier = {};
 
     running = false;
     startIndex = -1;
@@ -18,7 +19,8 @@ void Dfs::reset(Grid& grid)
     height = grid.getHeight();
 
     parent.clear();
-    discovered.clear();
+    distance.clear();
+    finalized.clear();
     lastPathLength = -1;
     lastPathCost = -1;
 
@@ -36,7 +38,7 @@ void Dfs::reset(Grid& grid)
     }
 }
 
-bool Dfs::start(Grid& grid)
+bool Dijkstra::start(Grid& grid)
 {
     reset(grid);
 
@@ -46,8 +48,12 @@ bool Dfs::start(Grid& grid)
     if (width <= 0 || height <= 0)
         return false;
 
-    parent.assign(width * height, -1);
-    discovered.assign(width * height, false);
+    const int nodeCount = width * height;
+    const int inf = std::numeric_limits<int>::max();
+
+    parent.assign(nodeCount, -1);
+    distance.assign(nodeCount, inf);
+    finalized.assign(nodeCount, false);
 
     int startRow = -1;
     int startCol = -1;
@@ -79,44 +85,36 @@ bool Dfs::start(Grid& grid)
     startIndex = toIndex(startRow, startCol);
     goalIndex = toIndex(goalRow, goalCol);
 
-    discovered[startIndex] = true;
-    frontier.push_back(startIndex);
+    distance[startIndex] = 0;
+    frontier.push({ 0, startIndex });
     running = true;
 
     return true;
 }
 
-void Dfs::applyFinalStates(Grid& grid, int foundGoalIndex)
+void Dijkstra::applyFinalStates(Grid& grid, int foundGoalIndex)
 {
     std::vector<bool> inFinalPath(width * height, false);
 
     int current = foundGoalIndex;
     int pathNodeCount = 0;
-    int pathCost = 0;
     while (current != -1)
     {
         inFinalPath[current] = true;
-
-        int row = current / width;
-        int col = current % width;
-        const Node& node = grid.getNode(row, col);
-
-        if (current != startIndex)
-            pathCost += node.weight;
-
         ++pathNodeCount;
-
         if (current == startIndex)
             break;
         current = parent[current];
     }
 
     lastPathLength = std::max(0, pathNodeCount - 1);
-    lastPathCost = pathCost;
+    lastPathCost = distance[foundGoalIndex];
+
+    const int inf = std::numeric_limits<int>::max();
 
     for (int index = 0; index < width * height; ++index)
     {
-        if (!discovered[index])
+        if (distance[index] == inf)
             continue;
 
         int row = index / width;
@@ -130,7 +128,7 @@ void Dfs::applyFinalStates(Grid& grid, int foundGoalIndex)
     }
 }
 
-Dfs::StepResult Dfs::step(Grid& grid, int maxSteps)
+Dijkstra::StepResult Dijkstra::step(Grid& grid, int maxSteps)
 {
     if (!running)
         return StepResult::InvalidMaze;
@@ -139,14 +137,30 @@ Dfs::StepResult Dfs::step(Grid& grid, int maxSteps)
 
     for (int iteration = 0; iteration < stepBudget; ++iteration)
     {
+        while (!frontier.empty())
+        {
+            const QueueEntry& top = frontier.top();
+
+            if (top.distance != distance[top.index] || finalized[top.index])
+            {
+                frontier.pop();
+                continue;
+            }
+
+            break;
+        }
+
         if (frontier.empty())
         {
             running = false;
             return StepResult::NoPath;
         }
 
-        int current = frontier.back();
-        frontier.pop_back();
+        QueueEntry currentEntry = frontier.top();
+        frontier.pop();
+
+        int current = currentEntry.index;
+        finalized[current] = true;
 
         int row = current / width;
         int col = current % width;
@@ -174,16 +188,20 @@ Dfs::StepResult Dfs::step(Grid& grid, int maxSteps)
                 continue;
 
             int nextIndex = toIndex(nextRow, nextCol);
-            if (discovered[nextIndex])
+            if (finalized[nextIndex])
                 continue;
 
             Node& nextNode = grid.getNode(nextRow, nextCol);
             if (!isWalkable(nextNode.state))
                 continue;
 
-            discovered[nextIndex] = true;
+            int candidateDistance = distance[current] + std::max(1, nextNode.weight);
+            if (candidateDistance >= distance[nextIndex])
+                continue;
+
+            distance[nextIndex] = candidateDistance;
             parent[nextIndex] = current;
-            frontier.push_back(nextIndex);
+            frontier.push({ candidateDistance, nextIndex });
         }
     }
 

@@ -20,6 +20,8 @@ public:
     void reset(Grid& grid);
 
     bool isRunning() const { return running; }
+    int getLastPathLength() const { return lastPathLength; }
+    int getLastPathCost() const { return lastPathCost; }
 
 private:
     int toIndex(int row, int col) const { return row * width + col; }
@@ -36,4 +38,6 @@ private:
     std::vector<int> frontier;
     std::vector<int> parent;
     std::vector<bool> discovered;
+    int lastPathLength = -1;
+    int lastPathCost = -1;
 };

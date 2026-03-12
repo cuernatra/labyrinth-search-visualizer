@@ -5,6 +5,7 @@
 #include "mazeGenerator.h"
 #include "algorithms/bfs.h"
 #include "algorithms/dfs.h"
+#include "algorithms/dijkstra.h"
 
 #include <SFML/Graphics.hpp>
 #include <vector>
@@ -28,12 +29,14 @@ private:
     void processEvents();
     void update(float deltaSeconds);
     void render();
+    void refreshNodeWeights(bool randomizePhases);
 
     Grid grid;
     Visualizer visualizer;
     MazeGenerator generator;
     Bfs bfs;
     Dfs dfs;
+    Dijkstra dijkstra;
 
     static constexpr int defaultGridWidth = 21;
     static constexpr int defaultGridHeight = 31;
@@ -53,8 +56,17 @@ private:
     int selectedAlgorithmIndex = 0;
     int activeAlgorithmIndex = -1;
     std::string algorithmStatus = "Algorithm idle.";
+    std::string algorithmResultMetric = "-";
     bool algorithmRunning = false;
     float algorithmElapsedSeconds = 0.f;
+
+    bool weightedMode = false;
+    int maxNodeWeight = 9;
+    float weightFrequency = 0.22f;
+    float weightContrast = 1.25f;
+    float weightPhaseA = 0.f;
+    float weightPhaseB = 0.f;
+    float weightPhaseC = 0.f;
 
     int selectedMazeId = -1;
     int selectedMazeIndex = -1;

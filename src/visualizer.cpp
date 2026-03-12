@@ -1,7 +1,24 @@
 #include "visualizer.h"
 #include "app.h"
 
-void Visualizer::draw(sf::RenderWindow& window, const Grid& grid, int cellSize, int marginX, int marginY)
+#include <algorithm>
+#include <string>
+
+Visualizer::Visualizer()
+{
+    weightFontLoaded = weightFont.loadFromFile("C:/Windows/Fonts/arial.ttf");
+
+    if (weightFontLoaded)
+    {
+        weightText.setFont(weightFont);
+        weightText.setFillColor(sf::Color::Black);
+
+        for (size_t i = 0; i < weightLabels.size(); ++i)
+            weightLabels[i] = std::to_string(static_cast<int>(i));
+    }
+}
+
+void Visualizer::draw(sf::RenderWindow& window, const Grid& grid, int cellSize, int marginX, int marginY, bool showWeights)
 {
     float offsetX = static_cast<float>(marginX);
     float offsetY = static_cast<float>(marginY);
@@ -20,6 +37,22 @@ void Visualizer::draw(sf::RenderWindow& window, const Grid& grid, int cellSize, 
 
             cell.setFillColor(getColor(node.state));
             window.draw(cell);
+
+            if (showWeights && weightFontLoaded && node.state != NodeState::Wall && cellSize >= 12)
+            {
+                weightText.setCharacterSize(static_cast<unsigned int>(std::max(10, cellSize / 2)));
+
+                if (node.weight >= 0 && node.weight < static_cast<int>(weightLabels.size()))
+                    weightText.setString(weightLabels[static_cast<size_t>(node.weight)]);
+                else
+                    weightText.setString(std::to_string(node.weight));
+
+                const sf::FloatRect textRect = weightText.getLocalBounds();
+                const float textX = node.pos.col * cellSize + offsetX + (cellSize - textRect.width) * 0.5f - textRect.left;
+                const float textY = node.pos.row * cellSize + offsetY + (cellSize - textRect.height) * 0.5f - textRect.top;
+                weightText.setPosition(textX, textY);
+                window.draw(weightText);
+            }
         }
     }
 }

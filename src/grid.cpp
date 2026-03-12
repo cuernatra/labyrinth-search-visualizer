@@ -16,6 +16,7 @@ Grid::Grid(int width, int height)
             nodes[row][col].pos.row = row;
             nodes[row][col].pos.col = col;
             nodes[row][col].state = NodeState::Empty;
+            nodes[row][col].weight = 1;
         }
     }
 }
@@ -111,6 +112,7 @@ void Grid::resize(int width, int height)
             nodes[row][col].pos.row = row;
             nodes[row][col].pos.col = col;
             nodes[row][col].state = NodeState::Empty;
+            nodes[row][col].weight = 1;
         }
     }
 }

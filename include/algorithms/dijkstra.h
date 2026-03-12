@@ -5,7 +5,7 @@
 #include <queue>
 #include <vector>
 
-class Bfs
+class Dijkstra
 {
 public:
     enum class StepResult
@@ -25,9 +25,20 @@ public:
     int getLastPathCost() const { return lastPathCost; }
 
 private:
+    struct QueueEntry
+    {
+        int distance = 0;
+        int index = -1;
+
+        bool operator>(const QueueEntry& other) const
+        {
+            return distance > other.distance;
+        }
+    };
+
     int toIndex(int row, int col) const { return row * width + col; }
     bool isWalkable(NodeState state) const;
-    void applyFinalStates(Grid& grid, int goalIndex);
+    void applyFinalStates(Grid& grid, int foundGoalIndex);
 
     int width = 0;
     int height = 0;
@@ -36,11 +47,10 @@ private:
 
     bool running = false;
 
-    std::queue<int> frontier;
+    std::priority_queue<QueueEntry, std::vector<QueueEntry>, std::greater<QueueEntry>> frontier;
     std::vector<int> parent;
-    std::vector<bool> discovered;
+    std::vector<int> distance;
+    std::vector<bool> finalized;
     int lastPathLength = -1;
     int lastPathCost = -1;
 };
-
-

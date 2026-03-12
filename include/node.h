@@ -25,4 +25,5 @@ class Node
     public:
         Pos pos;
         NodeState state = NodeState::Empty;
+        int weight = 1;
 };

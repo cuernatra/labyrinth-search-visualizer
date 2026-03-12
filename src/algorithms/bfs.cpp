@@ -20,6 +20,8 @@ void Bfs::reset(Grid& grid)
 
     parent.clear();
     discovered.clear();
+    lastPathLength = -1;
+    lastPathCost = -1;
 
     for (auto& row : grid.getAllNodes())
     {
@@ -90,13 +92,28 @@ void Bfs::applyFinalStates(Grid& grid, int foundGoalIndex)
     std::vector<bool> inFinalPath(width * height, false);
 
     int current = foundGoalIndex;
+    int pathNodeCount = 0;
+    int pathCost = 0;
     while (current != -1)
     {
         inFinalPath[current] = true;
+
+        int row = current / width;
+        int col = current % width;
+        const Node& node = grid.getNode(row, col);
+
+        if (current != startIndex)
+            pathCost += node.weight;
+
+        ++pathNodeCount;
+
         if (current == startIndex)
             break;
         current = parent[current];
     }
+
+    lastPathLength = std::max(0, pathNodeCount - 1);
+    lastPathCost = pathCost;
 
     for (int index = 0; index < width * height; ++index)
     {

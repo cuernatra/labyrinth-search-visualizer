@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cmath>
+#include <random>
 #include <string>
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -37,7 +38,54 @@ App::App()
     updateLayout();
     newMazeWidth = grid.getWidth();
     newMazeHeight = grid.getHeight();
+    refreshNodeWeights(true);
     ImGui::SFML::Init(window);
+}
+
+void App::refreshNodeWeights(bool randomizePhases)
+{
+    if (randomizePhases)
+    {
+        static std::mt19937 rng(std::random_device{}());
+        std::uniform_real_distribution<float> phaseDist(0.f, 6.2831853f);
+        weightPhaseA = phaseDist(rng);
+        weightPhaseB = phaseDist(rng);
+        weightPhaseC = phaseDist(rng);
+    }
+
+    const int clampedMaxWeight = std::clamp(maxNodeWeight, 2, 20);
+
+    for (auto& row : grid.getAllNodes())
+    {
+        for (auto& node : row)
+        {
+            if (node.state == NodeState::Wall)
+            {
+                node.weight = 1;
+                continue;
+            }
+
+            if (!weightedMode)
+            {
+                node.weight = 1;
+                continue;
+            }
+
+            const float x = static_cast<float>(node.pos.col);
+            const float y = static_cast<float>(node.pos.row);
+
+            const float waveX = std::sin(x * weightFrequency + weightPhaseA);
+            const float waveY = std::sin(y * weightFrequency + weightPhaseB);
+            const float waveD = std::sin((x + y) * weightFrequency * 0.7f + weightPhaseC);
+
+            const float combined = (waveX + waveY + waveD) / 3.f;
+            const float normalized = std::clamp((combined + 1.f) * 0.5f, 0.f, 1.f);
+            const float shaped = std::pow(normalized, std::max(0.1f, weightContrast));
+
+            const int weight = 1 + static_cast<int>(std::round(shaped * static_cast<float>(clampedMaxWeight - 1)));
+            node.weight = std::clamp(weight, 1, clampedMaxWeight);
+        }
+    }
 }
 
 void App::refreshMazeIds()
@@ -77,10 +125,12 @@ void App::resetApp(bool loadSelectedMaze)
     generationStepAccumulator = 0.f;
     bfs.reset(grid);
     dfs.reset(grid);
+    dijkstra.reset(grid);
     algorithmRunning = false;
     algorithmElapsedSeconds = 0.f;
     activeAlgorithmIndex = -1;
     algorithmStatus = "Algorithm idle.";
+    algorithmResultMetric = "-";
 
     mazeRouteGenerated = false;
     remainMazeGenerated = false;
@@ -103,6 +153,7 @@ void App::resetApp(bool loadSelectedMaze)
             loadedMazeId = selectedMazeId;
             generatedMazeId = -1;
             generatingNewMaze = false;
+            refreshNodeWeights(false);
             return;
         }
     }
@@ -115,6 +166,7 @@ void App::resetApp(bool loadSelectedMaze)
     selectedMazeIndex = -1;
     selectedMazeId = -1;
     generator.startFromTheScratch(grid);
+    refreshNodeWeights(true);
 }
 
 void App::updateLayout()
@@ -294,6 +346,7 @@ void App::update(float deltaSeconds)
 
                 if (MazeReady)
                 {
+                    refreshNodeWeights(true);
                     refreshMazeIds();
 
                     if (!mazeIds.empty())
@@ -330,6 +383,11 @@ void App::update(float deltaSeconds)
                 char buffer[128];
                 std::snprintf(buffer, sizeof(buffer), "BFS finished: path found in %.3f s.", algorithmElapsedSeconds);
                 algorithmStatus = buffer;
+
+                if (weightedMode)
+                    algorithmResultMetric = "Path cost sum: " + std::to_string(bfs.getLastPathCost());
+                else
+                    algorithmResultMetric = "Path length: " + std::to_string(bfs.getLastPathLength());
             }
             else if (result == Bfs::StepResult::NoPath)
             {
@@ -338,11 +396,13 @@ void App::update(float deltaSeconds)
                 char buffer[128];
                 std::snprintf(buffer, sizeof(buffer), "BFS finished: no path in %.3f s.", algorithmElapsedSeconds);
                 algorithmStatus = buffer;
+                algorithmResultMetric = "-";
             }
             else if (result == Bfs::StepResult::InvalidMaze)
             {
                 algorithmRunning = false;
                 algorithmStatus = "BFS could not continue (invalid maze state).";
+                algorithmResultMetric = "-";
             }
         }
         else if (activeAlgorithmIndex == 1)
@@ -356,6 +416,11 @@ void App::update(float deltaSeconds)
                 char buffer[128];
                 std::snprintf(buffer, sizeof(buffer), "DFS finished: path found in %.3f s.", algorithmElapsedSeconds);
                 algorithmStatus = buffer;
+
+                if (weightedMode)
+                    algorithmResultMetric = "Path cost sum: " + std::to_string(dfs.getLastPathCost());
+                else
+                    algorithmResultMetric = "Path length: " + std::to_string(dfs.getLastPathLength());
             }
             else if (result == Dfs::StepResult::NoPath)
             {
@@ -364,17 +429,53 @@ void App::update(float deltaSeconds)
                 char buffer[128];
                 std::snprintf(buffer, sizeof(buffer), "DFS finished: no path in %.3f s.", algorithmElapsedSeconds);
                 algorithmStatus = buffer;
+                algorithmResultMetric = "-";
             }
             else if (result == Dfs::StepResult::InvalidMaze)
             {
                 algorithmRunning = false;
                 algorithmStatus = "DFS could not continue (invalid maze state).";
+                algorithmResultMetric = "-";
+            }
+        }
+        else if (activeAlgorithmIndex == 2)
+        {
+            Dijkstra::StepResult result = dijkstra.step(grid, algorithmStepsPerUpdate);
+
+            if (result == Dijkstra::StepResult::Found)
+            {
+                algorithmRunning = false;
+
+                char buffer[128];
+                std::snprintf(buffer, sizeof(buffer), "Dijkstra finished: path found in %.3f s.", algorithmElapsedSeconds);
+                algorithmStatus = buffer;
+
+                if (weightedMode)
+                    algorithmResultMetric = "Path cost sum: " + std::to_string(dijkstra.getLastPathCost());
+                else
+                    algorithmResultMetric = "Path length: " + std::to_string(dijkstra.getLastPathLength());
+            }
+            else if (result == Dijkstra::StepResult::NoPath)
+            {
+                algorithmRunning = false;
+
+                char buffer[128];
+                std::snprintf(buffer, sizeof(buffer), "Dijkstra finished: no path in %.3f s.", algorithmElapsedSeconds);
+                algorithmStatus = buffer;
+                algorithmResultMetric = "-";
+            }
+            else if (result == Dijkstra::StepResult::InvalidMaze)
+            {
+                algorithmRunning = false;
+                algorithmStatus = "Dijkstra could not continue (invalid maze state).";
+                algorithmResultMetric = "-";
             }
         }
         else
         {
             algorithmRunning = false;
             algorithmStatus = "Algorithm selection became invalid.";
+            algorithmResultMetric = "-";
         }
     }
 }
@@ -408,7 +509,7 @@ void App::render()
 
     window.clear(sf::Color(90, 90, 90));
 
-    visualizer.draw(window, grid, cellSize, dynamicMarginX, dynamicMarginY);
+    visualizer.draw(window, grid, cellSize, dynamicMarginX, dynamicMarginY, weightedMode);
 
 
     const float controlsPanelY = static_cast<float>(marginY) * 0.2f;
@@ -451,7 +552,6 @@ void App::render()
 
     ImGui::TextUnformatted("\n");
     ImGui::Separator();
-    ImGui::TextUnformatted("\n");
 
     ImGui::TextUnformatted("New maze size\n");
 
@@ -495,7 +595,6 @@ void App::render()
 
     ImGui::TextUnformatted("\n");
     ImGui::Separator();
-    ImGui::TextUnformatted("\n");
     ImGui::TextUnformatted("Saved mazes");
 
     std::string statusText = "Status: None";
@@ -549,7 +648,6 @@ void App::render()
     ImGui::TextUnformatted(statusText.c_str());
     ImGui::TextUnformatted("\n");
     ImGui::Separator();
-    ImGui::TextUnformatted("\n");
     ImGui::TextUnformatted("Generation speed");
     ImGui::SliderFloat("##GenerationSpeed", &generationStepsPerSecond, 1.f, 600.f, "%.1f steps/s");
     ImGui::PushItemWidth(leftPanelWidth - 28.f);
@@ -562,6 +660,47 @@ void App::render()
     if (generationStepsPerSecond > 600.f)
         generationStepsPerSecond = 600.f;
 
+    ImGui::TextUnformatted("\n");
+    ImGui::Separator();
+
+    ImGui::TextUnformatted("Cell weights");
+
+    if (ImGui::Checkbox("Enable weighted cells", &weightedMode))
+    {
+        refreshNodeWeights(false);
+        algorithmResultMetric = "-";
+    }
+
+    bool slidersChanged = false;
+    ImGui::PushItemWidth(leftPanelWidth - 28.f);
+    ImGui::TextUnformatted("Max weight");
+    slidersChanged |= ImGui::SliderInt("##MaxWeight", &maxNodeWeight, 2, 20);
+
+    ImGui::TextUnformatted("Weight frequency");
+    slidersChanged |= ImGui::SliderFloat("##WeightFrequency", &weightFrequency, 0.05f, 0.8f, "%.2f");
+
+    ImGui::TextUnformatted("Weight contrast");
+    slidersChanged |= ImGui::SliderFloat("##WeightContrast", &weightContrast, 0.3f, 3.0f, "%.2f");
+    ImGui::PopItemWidth();
+
+    if (slidersChanged)
+    {
+        refreshNodeWeights(false);
+        algorithmResultMetric = "-";
+    }
+
+    if (ImGui::Button("Reshuffle weights", ImVec2(leftPanelWidth - 20.f, 24.f)))
+    {
+        refreshNodeWeights(true);
+        algorithmResultMetric = "-";
+    }
+
+    if (!weightedMode)
+        ImGui::TextWrapped("Weights disabled: every cell has cost 1.");
+    else
+        ImGui::TextWrapped("Smooth terrain weights are shown on every walkable node.");
+
+    ImGui::TextUnformatted("\n");
     ImGui::Separator();
 
     float buttonWidth = (leftPanelWidth - 35.f) / 3.f;
@@ -609,7 +748,7 @@ void App::render()
 
     ImGui::TextUnformatted("Algorithm selection");
 
-    const char* algorithms[] = { "BFS", "DFS" };
+    const char* algorithms[] = { "BFS", "DFS", "Dijkstra" };
     ImGui::Combo("##AlgorithmCombo", &selectedAlgorithmIndex, algorithms, IM_ARRAYSIZE(algorithms));
 
     if (ImGui::Button("Run selected algorithm", ImVec2(rightPanelWidth - 20.f, 30.f)))
@@ -622,8 +761,10 @@ void App::render()
         {
             bfs.reset(grid);
             dfs.reset(grid);
+            dijkstra.reset(grid);
             algorithmElapsedSeconds = 0.f;
             activeAlgorithmIndex = selectedAlgorithmIndex;
+            algorithmResultMetric = "Running...";
 
             if (selectedAlgorithmIndex == 0)
             {
@@ -637,25 +778,46 @@ void App::render()
                     algorithmRunning = false;
                     activeAlgorithmIndex = -1;
                     algorithmStatus = "BFS could not start (missing Start/Goal).";
+                    algorithmResultMetric = "-";
                 }
             }
             else
             {
-                if (dfs.start(grid))
+                if (selectedAlgorithmIndex == 1)
                 {
-                    algorithmRunning = true;
-                    algorithmStatus = "DFS running...";
+                    if (dfs.start(grid))
+                    {
+                        algorithmRunning = true;
+                        algorithmStatus = "DFS running...";
+                    }
+                    else
+                    {
+                        algorithmRunning = false;
+                        activeAlgorithmIndex = -1;
+                        algorithmStatus = "DFS could not start (missing Start/Goal).";
+                        algorithmResultMetric = "-";
+                    }
                 }
                 else
                 {
-                    algorithmRunning = false;
-                    activeAlgorithmIndex = -1;
-                    algorithmStatus = "DFS could not start (missing Start/Goal).";
+                    if (dijkstra.start(grid))
+                    {
+                        algorithmRunning = true;
+                        algorithmStatus = "Dijkstra running...";
+                    }
+                    else
+                    {
+                        algorithmRunning = false;
+                        activeAlgorithmIndex = -1;
+                        algorithmStatus = "Dijkstra could not start (missing Start/Goal).";
+                        algorithmResultMetric = "-";
+                    }
                 }
             }
         }
     }
 
+    ImGui::TextUnformatted("\n");
     ImGui::TextUnformatted("Algorithm steps/update");
     ImGui::PushItemWidth(rightPanelWidth - 28.f);
     ImGui::SliderInt("##AlgorithmStepsSlider", &algorithmStepsPerUpdate, 1, 200, "%d");
@@ -668,13 +830,20 @@ void App::render()
     if (algorithmStepsPerUpdate > 200)
         algorithmStepsPerUpdate = 200;
 
+    ImGui::TextUnformatted("\n");
     ImGui::Separator();
     ImGui::TextWrapped("%s", algorithmStatus.c_str());
+    ImGui::TextUnformatted("\n");
 
     ImGui::Separator();
 
     ImGui::TextUnformatted("Algorithm elapsed time");
     ImGui::Text("%.3f s", algorithmElapsedSeconds);
+
+    ImGui::TextUnformatted("\n");
+    ImGui::Separator();
+    ImGui::TextUnformatted("Result metric");
+    ImGui::TextWrapped("%s", algorithmResultMetric.c_str());
 
     ImGui::End();
 
