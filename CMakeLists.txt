@@ -46,6 +46,12 @@ add_executable(labyrinth-search-visualizer
     src/mazeStorage.cpp
 )
 
+if (WIN32)
+    set_target_properties(labyrinth-search-visualizer PROPERTIES
+        WIN32_EXECUTABLE ON
+    )
+endif()
+
 target_include_directories(labyrinth-search-visualizer PRIVATE
     ${PROJECT_SOURCE_DIR}/include
 )
@@ -56,6 +62,11 @@ target_link_libraries(labyrinth-search-visualizer PRIVATE
     sfml-system
     ImGui-SFML::ImGui-SFML
 )
+
+if (WIN32)
+    # Needed when using WIN32_EXECUTABLE with a normal int main() entry point.
+    target_link_libraries(labyrinth-search-visualizer PRIVATE sfml-main)
+endif()
 
 if (WIN32)
     add_custom_command(TARGET labyrinth-search-visualizer POST_BUILD
