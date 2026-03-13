@@ -6,6 +6,7 @@
 #include "algorithms/bfs.h"
 #include "algorithms/dfs.h"
 #include "algorithms/dijkstra.h"
+#include "algorithms/astar.h"
 
 #include <SFML/Graphics.hpp>
 #include <vector>
@@ -37,6 +38,7 @@ private:
     Bfs bfs;
     Dfs dfs;
     Dijkstra dijkstra;
+    AStar astar;
 
     static constexpr int defaultGridWidth = 21;
     static constexpr int defaultGridHeight = 31;

@@ -41,6 +41,7 @@ add_executable(labyrinth-search-visualizer
     src/algorithms/bfs.cpp
     src/algorithms/dfs.cpp
     src/algorithms/dijkstra.cpp
+    src/algorithms/astar.cpp
     src/mazeGenerator.cpp
     src/mazeStorage.cpp
 )

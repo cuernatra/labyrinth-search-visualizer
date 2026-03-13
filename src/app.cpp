@@ -126,6 +126,7 @@ void App::resetApp(bool loadSelectedMaze)
     bfs.reset(grid);
     dfs.reset(grid);
     dijkstra.reset(grid);
+    astar.reset(grid);
     algorithmRunning = false;
     algorithmElapsedSeconds = 0.f;
     activeAlgorithmIndex = -1;
@@ -472,6 +473,39 @@ void App::update(float deltaSeconds)
                 algorithmResultMetric = "-";
             }
         }
+        else if (activeAlgorithmIndex == 3)
+        {
+            AStar::StepResult result = astar.step(grid, algorithmStepsPerUpdate);
+
+            if (result == AStar::StepResult::Found)
+            {
+                algorithmRunning = false;
+
+                char buffer[128];
+                std::snprintf(buffer, sizeof(buffer), "A* finished: path found in %.3f s.", algorithmElapsedSeconds);
+                algorithmStatus = buffer;
+
+                if (weightedMode)
+                    algorithmResultMetric = "Path cost sum: " + std::to_string(astar.getLastPathCost());
+                else
+                    algorithmResultMetric = "Path length: " + std::to_string(astar.getLastPathLength());
+            }
+            else if (result == AStar::StepResult::NoPath)
+            {
+                algorithmRunning = false;
+
+                char buffer[128];
+                std::snprintf(buffer, sizeof(buffer), "A* finished: no path in %.3f s.", algorithmElapsedSeconds);
+                algorithmStatus = buffer;
+                algorithmResultMetric = "-";
+            }
+            else if (result == AStar::StepResult::InvalidMaze)
+            {
+                algorithmRunning = false;
+                algorithmStatus = "A* could not continue (invalid maze state).";
+                algorithmResultMetric = "-";
+            }
+        }
         else
         {
             algorithmRunning = false;
@@ -751,7 +785,7 @@ void App::render()
 
     ImGui::TextUnformatted("Algorithm selection");
 
-    const char* algorithms[] = { "BFS", "DFS", "Dijkstra" };
+    const char* algorithms[] = { "BFS", "DFS", "Dijkstra", "A*" };
     ImGui::Combo("##AlgorithmCombo", &selectedAlgorithmIndex, algorithms, IM_ARRAYSIZE(algorithms));
 
     if (ImGui::Button("Run selected algorithm", ImVec2(rightPanelWidth - 20.f, 30.f)))
@@ -765,6 +799,7 @@ void App::render()
             bfs.reset(grid);
             dfs.reset(grid);
             dijkstra.reset(grid);
+            astar.reset(grid);
             algorithmElapsedSeconds = 0.f;
             activeAlgorithmIndex = selectedAlgorithmIndex;
             algorithmResultMetric = "Running...";
@@ -784,38 +819,57 @@ void App::render()
                     algorithmResultMetric = "-";
                 }
             }
-            else
+            else if (selectedAlgorithmIndex == 1)
             {
-                if (selectedAlgorithmIndex == 1)
+                if (dfs.start(grid))
                 {
-                    if (dfs.start(grid))
-                    {
-                        algorithmRunning = true;
-                        algorithmStatus = "DFS running...";
-                    }
-                    else
-                    {
-                        algorithmRunning = false;
-                        activeAlgorithmIndex = -1;
-                        algorithmStatus = "DFS could not start (missing Start/Goal).";
-                        algorithmResultMetric = "-";
-                    }
+                    algorithmRunning = true;
+                    algorithmStatus = "DFS running...";
                 }
                 else
                 {
-                    if (dijkstra.start(grid))
-                    {
-                        algorithmRunning = true;
-                        algorithmStatus = "Dijkstra running...";
-                    }
-                    else
-                    {
-                        algorithmRunning = false;
-                        activeAlgorithmIndex = -1;
-                        algorithmStatus = "Dijkstra could not start (missing Start/Goal).";
-                        algorithmResultMetric = "-";
-                    }
+                    algorithmRunning = false;
+                    activeAlgorithmIndex = -1;
+                    algorithmStatus = "DFS could not start (missing Start/Goal).";
+                    algorithmResultMetric = "-";
                 }
+            }
+            else if (selectedAlgorithmIndex == 2)
+            {
+                if (dijkstra.start(grid))
+                {
+                    algorithmRunning = true;
+                    algorithmStatus = "Dijkstra running...";
+                }
+                else
+                {
+                    algorithmRunning = false;
+                    activeAlgorithmIndex = -1;
+                    algorithmStatus = "Dijkstra could not start (missing Start/Goal).";
+                    algorithmResultMetric = "-";
+                }
+            }
+            else if (selectedAlgorithmIndex == 3)
+            {
+                if (astar.start(grid))
+                {
+                    algorithmRunning = true;
+                    algorithmStatus = "A* running...";
+                }
+                else
+                {
+                    algorithmRunning = false;
+                    activeAlgorithmIndex = -1;
+                    algorithmStatus = "A* could not start (missing Start/Goal).";
+                    algorithmResultMetric = "-";
+                }
+            }
+            else
+            {
+                algorithmRunning = false;
+                activeAlgorithmIndex = -1;
+                algorithmStatus = "Unknown algorithm selected.";
+                algorithmResultMetric = "-";
             }
         }
     }

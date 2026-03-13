@@ -1,0 +1,228 @@
+#include "algorithms/astar.h"
+
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
+bool AStar::isWalkable(NodeState state) const
+{
+    return state != NodeState::Wall;
+}
+
+int AStar::heuristic(int index) const
+{
+    const int row = index / width;
+    const int col = index % width;
+    return std::abs(goalRow - row) + std::abs(goalCol - col);
+}
+
+void AStar::reset(Grid& grid)
+{
+    frontier = {};
+
+    running = false;
+    startIndex = -1;
+    goalIndex = -1;
+    goalRow = -1;
+    goalCol = -1;
+    width = grid.getWidth();
+    height = grid.getHeight();
+
+    parent.clear();
+    gScore.clear();
+    fScore.clear();
+    closed.clear();
+    reached.clear();
+    lastPathLength = -1;
+    lastPathCost = -1;
+
+    for (auto& row : grid.getAllNodes())
+    {
+        for (auto& node : row)
+        {
+            if (node.state == NodeState::Visited ||
+                node.state == NodeState::Backtracked ||
+                node.state == NodeState::Path)
+            {
+                node.state = NodeState::Empty;
+            }
+        }
+    }
+}
+
+bool AStar::start(Grid& grid)
+{
+    reset(grid);
+
+    width = grid.getWidth();
+    height = grid.getHeight();
+
+    if (width <= 0 || height <= 0)
+        return false;
+
+    const int nodeCount = width * height;
+    const int inf = std::numeric_limits<int>::max();
+
+    parent.assign(nodeCount, -1);
+    gScore.assign(nodeCount, inf);
+    fScore.assign(nodeCount, inf);
+    closed.assign(nodeCount, false);
+    reached.assign(nodeCount, false);
+
+    int startRow = -1;
+    int startCol = -1;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            NodeState state = grid.getNode(row, col).state;
+
+            if (state == NodeState::Start)
+            {
+                startRow = row;
+                startCol = col;
+            }
+            else if (state == NodeState::Goal)
+            {
+                goalRow = row;
+                goalCol = col;
+            }
+        }
+    }
+
+    if (startRow < 0 || goalRow < 0)
+        return false;
+
+    startIndex = toIndex(startRow, startCol);
+    goalIndex = toIndex(goalRow, goalCol);
+
+    gScore[startIndex] = 0;
+    fScore[startIndex] = heuristic(startIndex);
+    reached[startIndex] = true;
+    frontier.push({ fScore[startIndex], gScore[startIndex], startIndex });
+    running = true;
+
+    return true;
+}
+
+void AStar::applyFinalStates(Grid& grid, int foundGoalIndex)
+{
+    std::vector<bool> inFinalPath(width * height, false);
+
+    int current = foundGoalIndex;
+    int pathNodeCount = 0;
+    while (current != -1)
+    {
+        inFinalPath[current] = true;
+        ++pathNodeCount;
+
+        if (current == startIndex)
+            break;
+
+        current = parent[current];
+    }
+
+    lastPathLength = std::max(0, pathNodeCount - 1);
+    lastPathCost = gScore[foundGoalIndex];
+
+    for (int index = 0; index < width * height; ++index)
+    {
+        if (!reached[index])
+            continue;
+
+        int row = index / width;
+        int col = index % width;
+        Node& node = grid.getNode(row, col);
+
+        if (node.state == NodeState::Start || node.state == NodeState::Goal)
+            continue;
+
+        node.state = inFinalPath[index] ? NodeState::Path : NodeState::Backtracked;
+    }
+}
+
+AStar::StepResult AStar::step(Grid& grid, int maxSteps)
+{
+    if (!running)
+        return StepResult::InvalidMaze;
+
+    const int stepBudget = std::max(1, maxSteps);
+
+    for (int iteration = 0; iteration < stepBudget; ++iteration)
+    {
+        while (!frontier.empty())
+        {
+            const QueueEntry& top = frontier.top();
+
+            if (top.fScore != fScore[top.index] ||
+                top.gScore != gScore[top.index] ||
+                closed[top.index])
+            {
+                frontier.pop();
+                continue;
+            }
+
+            break;
+        }
+
+        if (frontier.empty())
+        {
+            running = false;
+            return StepResult::NoPath;
+        }
+
+        QueueEntry currentEntry = frontier.top();
+        frontier.pop();
+
+        int current = currentEntry.index;
+        closed[current] = true;
+
+        int row = current / width;
+        int col = current % width;
+        Node& currentNode = grid.getNode(row, col);
+
+        if (current == goalIndex)
+        {
+            applyFinalStates(grid, current);
+            running = false;
+            return StepResult::Found;
+        }
+
+        if (currentNode.state != NodeState::Start && currentNode.state != NodeState::Goal)
+            currentNode.state = NodeState::Visited;
+
+        const int dRow[4] = { -1, 1, 0, 0 };
+        const int dCol[4] = { 0, 0, -1, 1 };
+
+        for (int i = 0; i < 4; ++i)
+        {
+            int nextRow = row + dRow[i];
+            int nextCol = col + dCol[i];
+
+            if (nextRow < 0 || nextRow >= height || nextCol < 0 || nextCol >= width)
+                continue;
+
+            int nextIndex = toIndex(nextRow, nextCol);
+            if (closed[nextIndex])
+                continue;
+
+            Node& nextNode = grid.getNode(nextRow, nextCol);
+            if (!isWalkable(nextNode.state))
+                continue;
+
+            const int candidateG = gScore[current] + std::max(1, nextNode.weight);
+            if (candidateG >= gScore[nextIndex])
+                continue;
+
+            parent[nextIndex] = current;
+            gScore[nextIndex] = candidateG;
+            fScore[nextIndex] = candidateG + heuristic(nextIndex);
+            reached[nextIndex] = true;
+
+            frontier.push({ fScore[nextIndex], gScore[nextIndex], nextIndex });
+        }
+    }
+
+    return StepResult::Running;
+}
