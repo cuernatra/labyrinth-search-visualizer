@@ -6,6 +6,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(BUILD_SHARED_LIBS OFF)
+
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -64,15 +70,5 @@ target_link_libraries(labyrinth-search-visualizer PRIVATE
 )
 
 if (WIN32)
-    # Needed when using WIN32_EXECUTABLE with a normal int main() entry point.
     target_link_libraries(labyrinth-search-visualizer PRIVATE sfml-main)
-endif()
-
-if (WIN32)
-    add_custom_command(TARGET labyrinth-search-visualizer POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:labyrinth-search-visualizer>
-            $<TARGET_FILE_DIR:labyrinth-search-visualizer>
-        COMMAND_EXPAND_LISTS
-    )
 endif()
