@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Grid.h"
+#include "grid.h"
 #include <vector>
 
 class MazeGenerator
