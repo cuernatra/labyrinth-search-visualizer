@@ -3,15 +3,37 @@
 
 #include <algorithm>
 #include <string>
+#include <vector>
 
 Visualizer::Visualizer()
 {
-    weightFontLoaded = weightFont.loadFromFile("C:/Windows/Fonts/arial.ttf");
+    const std::vector<std::string> fontCandidates =
+    {
+        // macOS
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/System/Library/Fonts/Supplemental/Helvetica.ttc",
+        "/Library/Fonts/Arial.ttf",
+
+        // Windows
+        "C:/Windows/Fonts/arial.ttf",
+
+        // Linux
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans.ttf"
+    };
+
+    for (const std::string& fontPath : fontCandidates)
+    {
+        if (weightFont.loadFromFile(fontPath))
+        {
+            weightFontLoaded = true;
+            break;
+        }
+    }
 
     if (weightFontLoaded)
     {
         weightText.setFont(weightFont);
-        weightText.setFillColor(sf::Color::Black);
 
         for (size_t i = 0; i < weightLabels.size(); ++i)
             weightLabels[i] = std::to_string(static_cast<int>(i));
@@ -38,14 +60,23 @@ void Visualizer::draw(sf::RenderWindow& window, const Grid& grid, int cellSize, 
             cell.setFillColor(getColor(node.state));
             window.draw(cell);
 
-            if (showWeights && weightFontLoaded && node.state != NodeState::Wall && cellSize >= 12)
+            if (showWeights && weightFontLoaded && node.state != NodeState::Wall && cellSize >= 8)
             {
-                weightText.setCharacterSize(static_cast<unsigned int>(std::max(10, cellSize / 2)));
+                const unsigned int characterSize = static_cast<unsigned int>(std::clamp(cellSize - 2, 8, 28));
+                weightText.setCharacterSize(characterSize);
 
                 if (node.weight >= 0 && node.weight < static_cast<int>(weightLabels.size()))
                     weightText.setString(weightLabels[static_cast<size_t>(node.weight)]);
                 else
                     weightText.setString(std::to_string(node.weight));
+
+                const sf::Color cellColor = getColor(node.state);
+                const int brightness = static_cast<int>(cellColor.r) + static_cast<int>(cellColor.g) + static_cast<int>(cellColor.b);
+                const bool darkCell = brightness < (128 * 3);
+
+                weightText.setFillColor(darkCell ? sf::Color::White : sf::Color::Black);
+                weightText.setOutlineThickness(cellSize >= 16 ? 1.f : 0.f);
+                weightText.setOutlineColor(darkCell ? sf::Color::Black : sf::Color::White);
 
                 const sf::FloatRect textRect = weightText.getLocalBounds();
                 const float textX = node.pos.col * cellSize + offsetX + (cellSize - textRect.width) * 0.5f - textRect.left;
